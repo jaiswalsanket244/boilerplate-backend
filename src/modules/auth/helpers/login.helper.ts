@@ -1,9 +1,18 @@
 import envConfig from "@/config/env";
+import { ERROR_CODES } from "@/constants/error-codes";
 import { Company } from "@/db/models/company";
 import { OTP_PURPOSE } from "@/db/models/otpVerification";
 import { IUserDocument, User } from "@/db/models/user";
 import { STATUS, USER_TYPE } from "@/enums";
 import { JWT_CONFIG, jwtHelper } from "@/helpers/jwt";
+import { emitAccountLocked } from "@/modules/auth/helpers/auth-audit.helper";
+import {
+  clearFailedAttempts,
+  evaluateLockState,
+  isLoginLockoutEnabled,
+  recordFailedAttempt,
+  type TLockState,
+} from "@/modules/auth/helpers/lockout.helper";
 import { verifyOtp } from "@/modules/auth/helpers/otp.helper";
 import { AUTH_RESPONSE_MESSAGES } from "@/modules/auth/utils/auth.constant";
 import { LOGIN_METHOD } from "@/modules/auth/utils/auth.enum";
@@ -14,14 +23,48 @@ import {
 } from "@/modules/auth/utils/auth.util";
 import { authService } from "@/providers/auth";
 import { workos } from "@/providers/auth/authkit.provider";
+import type { IAuthResponse } from "@/providers/auth/utils/auth.types";
 import status from "http-status";
 import { generateAuthTokens } from "@/modules/auth/helpers/token.helper";
+
+/** Maps a locked state to the login error response the controller returns. */
+function toLockError(state: TLockState): TLoginResponse {
+  return {
+    error: state.resetRequired
+      ? AUTH_RESPONSE_MESSAGES.ACCOUNT_LOCKED_RESET_REQUIRED
+      : AUTH_RESPONSE_MESSAGES.ACCOUNT_LOCKED,
+    status: status.TOO_MANY_REQUESTS,
+    errorCode: state.resetRequired
+      ? ERROR_CODES.ACCOUNT_LOCKED_RESET_REQUIRED
+      : ERROR_CODES.ACCOUNT_LOCKED,
+    retryAfterSeconds: state.retryAfterSeconds,
+  };
+}
+
+/**
+ * Records a failed credential attempt and, if that attempt just tripped a lock,
+ * audits it and returns the lock response. Returns null when the account is still
+ * below the threshold, so the caller falls through to its normal error.
+ */
+async function recordFailureAndMaybeLock(
+  email: string,
+): Promise<TLoginResponse | null> {
+  const state = await recordFailedAttempt(email);
+  if (state.justLocked) emitAccountLocked(email, state.resetRequired);
+  return state.locked ? toLockError(state) : null;
+}
 
 /**
  * Handles the login logic for different types (password, otp)
  */
 export async function login(data: TLoginParams): Promise<TLoginResponse> {
   const { email, password, loginType, otp } = data;
+
+  // 0. Short-circuit a locked account before touching the DB or auth provider.
+  if (isLoginLockoutEnabled()) {
+    const lockState = await evaluateLockState(email);
+    if (lockState.locked) return toLockError(lockState);
+  }
 
   // 1. Find user
   const userData = await User.findOne({ email }).lean();
@@ -73,11 +116,29 @@ export async function login(data: TLoginParams): Promise<TLoginResponse> {
         };
       }
 
-      // Authenticate with Auth Provider
-      const result = await authService.authenticateWithPassword({
-        email,
-        password,
-      });
+      // Authenticate with Auth Provider. A wrong password THROWS here (the
+      // provider collapses every credential error into one throw); catch it so
+      // the failure is counted and answered with a 401 instead of bubbling to
+      // the global handler as a 500 + ErrorLogs row.
+      let result: IAuthResponse;
+      try {
+        result = await authService.authenticateWithPassword({
+          email,
+          password,
+        });
+      } catch (error) {
+        // Kill switch off — preserve the original behaviour exactly (the error
+        // propagates to the global handler → 500 + ErrorLogs row).
+        if (!isLoginLockoutEnabled()) throw error;
+
+        const lockError = await recordFailureAndMaybeLock(email);
+        if (lockError) return lockError;
+
+        return {
+          error: AUTH_RESPONSE_MESSAGES.INVALID_CREDENTIALS,
+          status: status.UNAUTHORIZED,
+        };
+      }
 
       providerMfaRequired = Boolean(result.mfaRequired);
 
@@ -104,6 +165,10 @@ export async function login(data: TLoginParams): Promise<TLoginResponse> {
       const result = await verifyOtp(email, OTP_PURPOSE.LOGIN, otp, false);
 
       if (!result.success) {
+        if (isLoginLockoutEnabled()) {
+          const lockError = await recordFailureAndMaybeLock(email);
+          if (lockError) return lockError;
+        }
         return {
           error: result.message,
           status: result.statusCode,
@@ -199,6 +264,11 @@ export async function login(data: TLoginParams): Promise<TLoginResponse> {
       status: status.OK,
       passwordRotation: rotationState,
     };
+  }
+
+  // Credentials verified — reset the brute-force counter for this account.
+  if (isLoginLockoutEnabled()) {
+    await clearFailedAttempts(email);
   }
 
   // 7. Generate session token

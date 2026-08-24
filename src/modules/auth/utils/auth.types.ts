@@ -26,6 +26,10 @@ export type TLoginResponse =
   | {
       error: string;
       status: number;
+      /** Client-facing code so the UI can branch (e.g. account-locked). */
+      errorCode?: TErrorCode;
+      /** Present for timed lockouts so the caller can emit a Retry-After header. */
+      retryAfterSeconds?: number;
       user?: never;
       token?: never;
       pendingMfaToken?: never;
@@ -36,6 +40,8 @@ export type TLoginResponse =
   | {
       error: null;
       status: number;
+      errorCode?: never;
+      retryAfterSeconds?: never;
       user: IUser;
       token?: string | null;
       refreshToken?: string;

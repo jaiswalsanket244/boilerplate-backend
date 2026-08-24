@@ -113,3 +113,25 @@ export function emitLoginFailure(
     }),
   );
 }
+
+/*
+ * A brute-force threshold was crossed and the account was locked. Like a failed
+ * login there is no authenticated principal, so route it through the AUTH
+ * subsystem sentinel chain.
+ */
+export function emitAccountLocked(
+  email: string | undefined,
+  resetRequired: boolean,
+): void {
+  runWithSubsystem(SystemSubsystem.AUTH, () =>
+    safeEmit({
+      action: AuditAction.USER_ACCOUNT_LOCKED,
+      category: AuditCategory.AUTHENTICATION,
+      status: AuditStatus.FAILURE,
+      target: { label: email ?? null },
+      failureReason: resetRequired
+        ? "Account locked — password reset required"
+        : "Account temporarily locked",
+    }),
+  );
+}

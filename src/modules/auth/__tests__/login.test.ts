@@ -1,7 +1,7 @@
 import { createApp } from "@/app";
 import { faker } from "@faker-js/faker";
 import request from "supertest";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   mockAuthKitProvider,
@@ -12,7 +12,12 @@ import { STATUS, USER_TYPE } from "@/enums";
 import { ERROR_CODES } from "@/constants/error-codes";
 import { AUTH_RESPONSE_MESSAGES } from "@/modules/auth/utils/auth.constant";
 import { AuditLogModel } from "@/db/models/audit-logs/audit-log";
+import { LoginAttempt } from "@/db/models/loginAttempt";
+import { ErrorLogs } from "@/db/models/errorLogs";
 import { drainPendingEmits } from "@/modules/audit-logs/helpers/emit.helper";
+import { recordFailedAttempt } from "@/modules/auth/helpers/lockout.helper";
+import envConfig from "@/config/env";
+import { jwtHelper } from "@/helpers/jwt";
 import {
   SYSTEM_SUBSYSTEM_REFS,
   SystemSubsystem,
@@ -368,7 +373,10 @@ describe("POST /api/auth/login", () => {
   // =========================================================================
 
   describe("server errors", () => {
-    it("returns 500 when the auth provider throws during password authentication", async () => {
+    it("returns 401 (not 500) when the auth provider throws during password authentication", async () => {
+      // With lockout enabled a wrong password / provider throw is caught, the
+      // attempt is counted, and the caller gets a clean 401 — no 500, no
+      // ErrorLogs row.
       mockAuthKitProvider.authenticateWithPassword.mockRejectedValueOnce(
         new Error("Provider is down"),
       );
@@ -380,7 +388,182 @@ describe("POST /api/auth/login", () => {
         .send(buildPasswordLoginPayload({ email: user.email }))
         .set("Accept", "application/json");
 
-      expect(res.status).toBe(500);
+      expect(res.status).toBe(401);
+    });
+  });
+
+  // =========================================================================
+  // 6. Account lockout (brute-force protection)
+  // =========================================================================
+
+  describe("account lockout", () => {
+    // Drives one failed password attempt and returns the response.
+    const failLogin = (email: string) =>
+      request(app)
+        .post("/api/auth/login")
+        .send(buildPasswordLoginPayload({ email }))
+        .set("Accept", "application/json");
+
+    // Pretend an active timed lock has elapsed so the next attempt is allowed.
+    const expireTimedLock = (email: string) =>
+      LoginAttempt.updateOne(
+        { email },
+        { $set: { lockedUntil: new Date(Date.now() - 1000) } },
+      );
+
+    it("locks the account at exactly 5 / 10 / 15 failed attempts", async () => {
+      const { user } = await createTestSession();
+      mockAuthKitProvider.authenticateWithPassword.mockRejectedValue(
+        new Error("bad password"),
+      );
+
+      // Attempts 1–4: allowed through to a 401.
+      for (let i = 0; i < 4; i++) {
+        expect((await failLogin(user.email)).status).toBe(401);
+      }
+
+      // 5th failure → temporary lock.
+      const fifth = await failLogin(user.email);
+      expect(fifth.status).toBe(429);
+      expect(fifth.body.messageCode).toBe(ERROR_CODES.ACCOUNT_LOCKED);
+
+      await expireTimedLock(user.email);
+
+      // 6–9: allowed again (401), 10th → second lock.
+      for (let i = 0; i < 4; i++) {
+        expect((await failLogin(user.email)).status).toBe(401);
+      }
+      const tenth = await failLogin(user.email);
+      expect(tenth.status).toBe(429);
+      expect(tenth.body.messageCode).toBe(ERROR_CODES.ACCOUNT_LOCKED);
+      expect(
+        (await LoginAttempt.findOne({ email: user.email }))?.failedCount,
+      ).toBe(10);
+
+      await expireTimedLock(user.email);
+
+      // 11–14: allowed, 15th → terminal lock requiring a reset.
+      for (let i = 0; i < 4; i++) {
+        expect((await failLogin(user.email)).status).toBe(401);
+      }
+      const fifteenth = await failLogin(user.email);
+      expect(fifteenth.status).toBe(429);
+      expect(fifteenth.body.messageCode).toBe(
+        ERROR_CODES.ACCOUNT_LOCKED_RESET_REQUIRED,
+      );
+
+      const record = await LoginAttempt.findOne({ email: user.email });
+      expect(record?.failedCount).toBe(15);
+      expect(record?.resetRequired).toBe(true);
+    });
+
+    it("returns 429 without ever calling the auth provider while locked", async () => {
+      const { user } = await createTestSession();
+      mockAuthKitProvider.authenticateWithPassword.mockRejectedValue(
+        new Error("bad password"),
+      );
+
+      // Trip the lock.
+      for (let i = 0; i < 5; i++) await failLogin(user.email);
+
+      mockAuthKitProvider.authenticateWithPassword.mockClear();
+
+      const res = await failLogin(user.email);
+
+      expect(res.status).toBe(429);
+      expect(
+        mockAuthKitProvider.authenticateWithPassword,
+      ).not.toHaveBeenCalled();
+    });
+
+    it("writes a user.account.locked audit entry when a lock trips", async () => {
+      const { user } = await createTestSession();
+      mockAuthKitProvider.authenticateWithPassword.mockRejectedValue(
+        new Error("bad password"),
+      );
+
+      for (let i = 0; i < 5; i++) await failLogin(user.email);
+
+      await drainPendingEmits();
+
+      const row = await AuditLogModel.findOne({
+        action: "user.account.locked",
+      }).lean();
+      expect(row).toBeTruthy();
+      expect(row?.target?.label).toBe(user.email);
+    });
+
+    it("clears a terminal lock when the password is reset", async () => {
+      const { user } = await createTestSession();
+
+      // Seed a terminal lock directly.
+      await LoginAttempt.create({
+        email: user.email,
+        failedCount: 15,
+        resetRequired: true,
+      });
+
+      mockAuthKitProvider.updateUser.mockResolvedValue({
+        id: user.externalUserId,
+        email: user.email,
+      });
+
+      const token = jwtHelper.generateToken({ email: user.email }, "1h");
+
+      const res = await request(app)
+        .post("/api/auth/update-password")
+        .send({ email: user.email, password: "NewPass@123", token })
+        .set("Accept", "application/json");
+
+      expect(res.status).toBe(200);
+      expect(await LoginAttempt.findOne({ email: user.email })).toBeNull();
+    });
+
+    it("returns 401 and writes no ErrorLogs row on a wrong password", async () => {
+      const { user } = await createTestSession();
+      mockAuthKitProvider.authenticateWithPassword.mockRejectedValue(
+        new Error("bad password"),
+      );
+
+      const res = await failLogin(user.email);
+
+      expect(res.status).toBe(401);
+      expect(await ErrorLogs.countDocuments()).toBe(0);
+    });
+
+    it("does not lose increments under concurrent failures", async () => {
+      // Exercised at the helper level so the assertion targets the atomic $inc
+      // itself, not the HTTP lock-gate (which would legitimately reject a racing
+      // request once the lock trips).
+      const email = "race@example.com";
+
+      await Promise.all(
+        Array.from({ length: 5 }, () => recordFailedAttempt(email)),
+      );
+
+      const record = await LoginAttempt.findOne({ email });
+      expect(record?.failedCount).toBe(5);
+    });
+
+    describe("kill switch off", () => {
+      beforeEach(() => {
+        envConfig.LOGIN_LOCKOUT_ENABLED = false;
+      });
+      afterEach(() => {
+        envConfig.LOGIN_LOCKOUT_ENABLED = true;
+      });
+
+      it("restores the original behaviour: provider throw → 500, no lock record", async () => {
+        const { user } = await createTestSession();
+        mockAuthKitProvider.authenticateWithPassword.mockRejectedValue(
+          new Error("Provider is down"),
+        );
+
+        const res = await failLogin(user.email);
+
+        expect(res.status).toBe(500);
+        expect(await LoginAttempt.findOne({ email: user.email })).toBeNull();
+      });
     });
   });
 

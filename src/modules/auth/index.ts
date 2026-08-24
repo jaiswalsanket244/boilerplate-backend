@@ -1,4 +1,5 @@
 import { Middleware } from "@/middleware/auth";
+import { loginRateLimiter } from "@/middleware/rate-limiter";
 import { AuthController } from "@/modules/auth/auth.controller";
 import { authValidators } from "@/modules/auth/utils/auth.validation";
 import { Router } from "express";
@@ -20,7 +21,12 @@ export class AuthRouter {
 
     this.router.post("/register", authValidators.register, controller.register);
 
-    this.router.post("/login", authValidators.login, controller.login);
+    this.router.post(
+      "/login",
+      loginRateLimiter,
+      authValidators.login,
+      controller.login,
+    );
 
     this.router.post("/logout", controller.logout);
     this.router.post("/refresh-token", controller.refreshToken);

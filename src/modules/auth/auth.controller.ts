@@ -130,8 +130,22 @@ export class AuthController {
       });
 
       if (result.error !== null) {
-        emitLoginFailure(email, result.error);
-        return ErrorResponse(res, result.status, { message: result.error });
+        const isLockout =
+          result.errorCode === ERROR_CODES.ACCOUNT_LOCKED ||
+          result.errorCode === ERROR_CODES.ACCOUNT_LOCKED_RESET_REQUIRED;
+
+        // A lockout is already audited as `user.account.locked` when it trips;
+        // don't also log it as a credential failure.
+        if (!isLockout) emitLoginFailure(email, result.error);
+
+        if (result.retryAfterSeconds) {
+          res.setHeader("Retry-After", String(result.retryAfterSeconds));
+        }
+
+        return ErrorResponse(res, result.status, {
+          message: result.error,
+          messageCode: result.errorCode,
+        });
       }
 
       const { user, token, refreshToken, pendingMfaToken, mfaChallengeId } =

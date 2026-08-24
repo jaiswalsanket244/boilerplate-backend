@@ -28,6 +28,15 @@ const apiConfig: IApiConfig = {
   RATE_LIMIT_DEFAULT_MESSAGE: "Too many requests, please try again later.",
 
   /**
+   * Login-specific limit. The login page is the highest-value target for
+   * credential stuffing, so it gets a much tighter per-IP budget than the
+   * site-wide limiter above.
+   */
+  LOGIN_RATE_LIMIT_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
+  LOGIN_RATE_LIMIT_MAX_REQUESTS: 10,
+  LOGIN_RATE_LIMIT_MESSAGE: "Too many login attempts, please try again later.",
+
+  /**
    * API Payload Size Limits
    *
    * @property {string} API_MAX_PAYLOAD_SIZE - Maximum size for JSON/raw request bodies.

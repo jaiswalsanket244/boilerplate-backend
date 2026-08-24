@@ -47,6 +47,10 @@ export const AUTH_RESPONSE_MESSAGES = {
   ACCOUNT_DELETED: "Your account has been deleted",
   MFA_FACTOR_MISSING:
     "Multi-factor authentication is required but no factor is registered on this account. Please contact support.",
+  ACCOUNT_LOCKED:
+    "Too many failed attempts. This account is temporarily locked. Please try again later.",
+  ACCOUNT_LOCKED_RESET_REQUIRED:
+    "Too many failed attempts. This account is locked — reset your password to regain access.",
 
   // OTP
   OTP_REQUIRED: "OTP is required for OTP login",
@@ -61,6 +65,31 @@ export const AUTH_RESPONSE_MESSAGES = {
     "Phone number must be in E.164 format (e.g. +911234567890).",
   USER_ALREADY_EXISTS_EMAIL: "User already exists with this email address.",
   USER_NOT_FOUND_OTP: "User not found.",
+} as const;
+
+/**
+ * Account-lockout thresholds for repeated failed logins.
+ *
+ * The counter is monotonic and never decays with time — it is cleared only by a
+ * successful login or a successful password reset. A locked account short-circuits
+ * the login flow before the auth provider is ever called.
+ *
+ *   failedCount  →  effect
+ *   1–4             allowed
+ *   5               locked for FIRST.lockMinutes
+ *   10              locked for SECOND.lockMinutes
+ *   15              terminal lock — cleared by password reset only
+ */
+export const LOGIN_LOCKOUT = {
+  FIRST: { at: 5, lockMinutes: 5 },
+  SECOND: { at: 10, lockMinutes: 30 },
+  TERMINAL: { at: 15 },
+  /**
+   * Housekeeping TTL for non-terminal records (minutes). Only reclaims abandoned
+   * rows long after every timed lock has elapsed; it is intentionally far larger
+   * than SECOND.lockMinutes so it never shortens an active lock.
+   */
+  RECORD_TTL_MINUTES: 24 * 60,
 } as const;
 
 export const DEFAULT_PASSWORD_VALIDITY_DAYS = 90;
