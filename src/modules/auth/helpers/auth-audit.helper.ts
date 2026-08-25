@@ -113,3 +113,23 @@ export function emitLoginFailure(
     }),
   );
 }
+
+/*
+ * Emitted when repeated failures trip an account lock. Like login failures this
+ * has no authenticated principal, so it routes through the AUTH sentinel chain.
+ * `reason` is a fixed lock category, never anything derived from the attempt.
+ */
+export function emitAccountLocked(
+  email: string | undefined,
+  reason: string,
+): void {
+  runWithSubsystem(SystemSubsystem.AUTH, () =>
+    safeEmit({
+      action: AuditAction.USER_ACCOUNT_LOCKED,
+      category: AuditCategory.AUTHENTICATION,
+      status: AuditStatus.FAILURE,
+      target: { label: email ?? null },
+      failureReason: reason,
+    }),
+  );
+}

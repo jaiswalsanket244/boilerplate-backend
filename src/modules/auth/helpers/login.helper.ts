@@ -5,6 +5,13 @@ import { IUserDocument, User } from "@/db/models/user";
 import { STATUS, USER_TYPE } from "@/enums";
 import { JWT_CONFIG, jwtHelper } from "@/helpers/jwt";
 import { verifyOtp } from "@/modules/auth/helpers/otp.helper";
+import {
+  clearFailedAttempts,
+  evaluateLockState,
+  recordFailedAttempt,
+  type ILockState,
+} from "@/modules/auth/helpers/lockout.helper";
+import { ERROR_CODES } from "@/constants/error-codes";
 import { AUTH_RESPONSE_MESSAGES } from "@/modules/auth/utils/auth.constant";
 import { LOGIN_METHOD } from "@/modules/auth/utils/auth.enum";
 import { TLoginParams, TLoginResponse } from "@/modules/auth/utils/auth.types";
@@ -18,10 +25,35 @@ import status from "http-status";
 import { generateAuthTokens } from "@/modules/auth/helpers/token.helper";
 
 /**
+ * Builds the 429 response for a locked account, choosing the terminal
+ * (reset-required) or temporary message and error code from the lock state.
+ */
+function lockedResponse(state: ILockState): TLoginResponse {
+  return state.resetRequired
+    ? {
+        error: AUTH_RESPONSE_MESSAGES.ACCOUNT_LOCKED_RESET_REQUIRED,
+        status: status.TOO_MANY_REQUESTS,
+        messageCode: ERROR_CODES.ACCOUNT_LOCKED_RESET_REQUIRED,
+      }
+    : {
+        error: AUTH_RESPONSE_MESSAGES.ACCOUNT_LOCKED,
+        status: status.TOO_MANY_REQUESTS,
+        messageCode: ERROR_CODES.ACCOUNT_LOCKED,
+      };
+}
+
+/**
  * Handles the login logic for different types (password, otp)
  */
 export async function login(data: TLoginParams): Promise<TLoginResponse> {
   const { email, password, loginType, otp } = data;
+
+  // 0. Refuse a locked account before any user lookup or auth-provider call,
+  // so a locked account never reaches WorkOS.
+  const lockState = await evaluateLockState(email);
+  if (lockState.locked) {
+    return lockedResponse(lockState);
+  }
 
   // 1. Find user
   const userData = await User.findOne({ email }).lean();
@@ -73,11 +105,23 @@ export async function login(data: TLoginParams): Promise<TLoginResponse> {
         };
       }
 
-      // Authenticate with Auth Provider
-      const result = await authService.authenticateWithPassword({
-        email,
-        password,
-      });
+      // Authenticate with Auth Provider. A wrong password surfaces as a thrown
+      // error here (WorkOS does not return a structured failure), so record the
+      // failed attempt and return 401 rather than letting it become a 500.
+      let result;
+      try {
+        result = await authService.authenticateWithPassword({
+          email,
+          password,
+        });
+      } catch {
+        const state = await recordFailedAttempt(email);
+        if (state.locked) return lockedResponse(state);
+        return {
+          error: AUTH_RESPONSE_MESSAGES.INVALID_CREDENTIALS,
+          status: status.UNAUTHORIZED,
+        };
+      }
 
       providerMfaRequired = Boolean(result.mfaRequired);
 
@@ -104,6 +148,8 @@ export async function login(data: TLoginParams): Promise<TLoginResponse> {
       const result = await verifyOtp(email, OTP_PURPOSE.LOGIN, otp, false);
 
       if (!result.success) {
+        const state = await recordFailedAttempt(email);
+        if (state.locked) return lockedResponse(state);
         return {
           error: result.message,
           status: result.statusCode,
@@ -129,6 +175,10 @@ export async function login(data: TLoginParams): Promise<TLoginResponse> {
       status: status.UNAUTHORIZED,
     };
   }
+
+  // Credentials verified — clear the failed-attempt counter and any lock. This
+  // is one of the two ways a terminal lock is released (the other is a reset).
+  await clearFailedAttempts(email);
 
   // 5. Check account and company status
   const isSuperAdmin = authenticatedUser.roles === USER_TYPE.SUPER_ADMIN;

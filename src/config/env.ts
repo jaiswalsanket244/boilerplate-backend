@@ -76,6 +76,13 @@ const envSchema = z.object({
   ATHENA_OUTPUT_LOCATION: z.string().optional(),
   ATHENA_REGION: z.string().optional(),
 
+  // Kill switch for the per-account login lockout. Enabled unless explicitly
+  // set to the string "false" — disabling it restores the prior login flow.
+  LOGIN_LOCKOUT_ENABLED: z
+    .string()
+    .optional()
+    .transform((value) => value !== "false"),
+
   AUDIT_HOT_WINDOW_DAYS: z.coerce.number().int().positive().default(90), //Cold Stroage (S3) Migration Days
   AUDIT_ARCHIVE_BUCKET: z.string().optional(),
   AUDIT_ARCHIVE_GLUE_DB: z.string().optional(),

@@ -131,7 +131,10 @@ export class AuthController {
 
       if (result.error !== null) {
         emitLoginFailure(email, result.error);
-        return ErrorResponse(res, result.status, { message: result.error });
+        return ErrorResponse(res, result.status, {
+          message: result.error,
+          messageCode: result.messageCode,
+        });
       }
 
       const { user, token, refreshToken, pendingMfaToken, mfaChallengeId } =

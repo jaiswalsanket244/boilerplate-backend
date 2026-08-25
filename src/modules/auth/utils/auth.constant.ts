@@ -47,6 +47,10 @@ export const AUTH_RESPONSE_MESSAGES = {
   ACCOUNT_DELETED: "Your account has been deleted",
   MFA_FACTOR_MISSING:
     "Multi-factor authentication is required but no factor is registered on this account. Please contact support.",
+  ACCOUNT_LOCKED:
+    "Too many failed login attempts. Your account is temporarily locked. Please try again later.",
+  ACCOUNT_LOCKED_RESET_REQUIRED:
+    "Your account is locked due to too many failed login attempts. Please reset your password to regain access.",
 
   // OTP
   OTP_REQUIRED: "OTP is required for OTP login",
@@ -61,6 +65,33 @@ export const AUTH_RESPONSE_MESSAGES = {
     "Phone number must be in E.164 format (e.g. +911234567890).",
   USER_ALREADY_EXISTS_EMAIL: "User already exists with this email address.",
   USER_NOT_FOUND_OTP: "User not found.",
+} as const;
+
+/**
+ * Login lockout policy — protects individual accounts from password guessing.
+ *
+ * Counting is threshold-based with no time decay: the failed-attempt counter
+ * only clears on a successful login or a successful password reset. Each
+ * threshold applies a progressively longer lock; the terminal threshold can
+ * only be cleared by the password-reset flow.
+ */
+export const LOGIN_LOCKOUT = {
+  THRESHOLDS: {
+    // Lock for LOCK_MINUTES.FIRST once this many failures accumulate.
+    FIRST: 5,
+    // Lock for LOCK_MINUTES.SECOND at this count.
+    SECOND: 10,
+    // Terminal lock — cleared only by a password reset.
+    TERMINAL: 15,
+  },
+  LOCK_MINUTES: {
+    FIRST: 5,
+    SECOND: 30,
+  },
+  // Horizon after which an idle attempt row is auto-removed by the TTL index.
+  // This is cleanup only, not decay: it is refreshed on every failed attempt,
+  // so an account under active attack never ages its counter out.
+  TTL_DAYS: 30,
 } as const;
 
 export const DEFAULT_PASSWORD_VALIDITY_DAYS = 90;

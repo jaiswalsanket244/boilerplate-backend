@@ -2,6 +2,7 @@ import envConfig from "@/config/env";
 import { Company } from "@/db/models/company";
 import { User } from "@/db/models/user";
 import { jwtHelper } from "@/helpers/jwt";
+import { clearFailedAttempts } from "@/modules/auth/helpers/lockout.helper";
 import {
   buildPasswordTimestamps,
   getPasswordRotationConfig,
@@ -96,6 +97,9 @@ export const updatePassword = async (
     },
     { new: true },
   );
+
+  // A successful reset is the only way to clear a terminal login lock.
+  await clearFailedAttempts(email);
 
   return { success: true, user: updatedUser };
 };
