@@ -1,9 +1,17 @@
 import envConfig from "@/config/env";
+import { ERROR_CODES } from "@/constants/error-codes";
 import { Company } from "@/db/models/company";
 import { OTP_PURPOSE } from "@/db/models/otpVerification";
 import { IUserDocument, User } from "@/db/models/user";
 import { STATUS, USER_TYPE } from "@/enums";
 import { JWT_CONFIG, jwtHelper } from "@/helpers/jwt";
+import { emitAccountLocked } from "@/modules/auth/helpers/auth-audit.helper";
+import {
+  clearFailedAttempts,
+  evaluateLockState,
+  isLoginLockoutEnabled,
+  recordFailedAttempt,
+} from "@/modules/auth/helpers/lockout.helper";
 import { verifyOtp } from "@/modules/auth/helpers/otp.helper";
 import { AUTH_RESPONSE_MESSAGES } from "@/modules/auth/utils/auth.constant";
 import { LOGIN_METHOD } from "@/modules/auth/utils/auth.enum";
@@ -14,14 +22,42 @@ import {
 } from "@/modules/auth/utils/auth.util";
 import { authService } from "@/providers/auth";
 import { workos } from "@/providers/auth/authkit.provider";
+import type { IAuthResponse } from "@/providers/auth/utils/auth.types";
 import status from "http-status";
 import { generateAuthTokens } from "@/modules/auth/helpers/token.helper";
+
+/**
+ * Record one failed credential attempt against the lockout counter and, when it
+ * crosses a threshold, emit the account-locked audit entry. No-op when the
+ * kill switch is off so disabled behaviour matches the pre-feature flow exactly.
+ */
+async function registerLoginFailure(email: string): Promise<void> {
+  if (!isLoginLockoutEnabled()) return;
+  const { trigger } = await recordFailedAttempt(email);
+  if (trigger) emitAccountLocked(email, trigger === "TERMINAL");
+}
 
 /**
  * Handles the login logic for different types (password, otp)
  */
 export async function login(data: TLoginParams): Promise<TLoginResponse> {
   const { email, password, loginType, otp } = data;
+
+  // 0. Reject locked accounts before touching the user record or the provider.
+  if (isLoginLockoutEnabled()) {
+    const lockState = await evaluateLockState(email);
+    if (lockState.locked) {
+      return {
+        error: lockState.resetRequired
+          ? AUTH_RESPONSE_MESSAGES.ACCOUNT_LOCKED_RESET_REQUIRED
+          : AUTH_RESPONSE_MESSAGES.ACCOUNT_LOCKED,
+        status: status.TOO_MANY_REQUESTS,
+        messageCode: lockState.resetRequired
+          ? ERROR_CODES.ACCOUNT_LOCKED_RESET_REQUIRED
+          : ERROR_CODES.ACCOUNT_LOCKED,
+      };
+    }
+  }
 
   // 1. Find user
   const userData = await User.findOne({ email }).lean();
@@ -73,11 +109,23 @@ export async function login(data: TLoginParams): Promise<TLoginResponse> {
         };
       }
 
-      // Authenticate with Auth Provider
-      const result = await authService.authenticateWithPassword({
-        email,
-        password,
-      });
+      // Authenticate with Auth Provider. A wrong password (and any other auth
+      // rejection) surfaces here as a throw, so catch it: record the failed
+      // attempt and return 401 rather than letting it bubble to the global
+      // handler, which would answer 500 and write an ErrorLogs row.
+      let result: IAuthResponse;
+      try {
+        result = await authService.authenticateWithPassword({
+          email,
+          password,
+        });
+      } catch {
+        await registerLoginFailure(email);
+        return {
+          error: AUTH_RESPONSE_MESSAGES.INVALID_CREDENTIALS,
+          status: status.UNAUTHORIZED,
+        };
+      }
 
       providerMfaRequired = Boolean(result.mfaRequired);
 
@@ -104,6 +152,7 @@ export async function login(data: TLoginParams): Promise<TLoginResponse> {
       const result = await verifyOtp(email, OTP_PURPOSE.LOGIN, otp, false);
 
       if (!result.success) {
+        await registerLoginFailure(email);
         return {
           error: result.message,
           status: result.statusCode,
@@ -201,7 +250,12 @@ export async function login(data: TLoginParams): Promise<TLoginResponse> {
     };
   }
 
-  // 7. Generate session token
+  // 7. Credentials are valid and no gate remains — clear the failure counter
+  // and mint the session.
+  if (isLoginLockoutEnabled()) {
+    await clearFailedAttempts(email);
+  }
+
   const { token, refreshToken, permissions } = await generateAuthTokens({
     user: authenticatedUser,
     company: company!,

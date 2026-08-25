@@ -45,6 +45,10 @@ export const AUTH_RESPONSE_MESSAGES = {
   INVALID_CREDENTIALS: "Invalid credentials",
   ACCOUNT_DISABLED: "Your account is disabled",
   ACCOUNT_DELETED: "Your account has been deleted",
+  ACCOUNT_LOCKED:
+    "Too many failed login attempts. Please try again in a few minutes.",
+  ACCOUNT_LOCKED_RESET_REQUIRED:
+    "Your account is locked due to too many failed login attempts. Please reset your password to continue.",
   MFA_FACTOR_MISSING:
     "Multi-factor authentication is required but no factor is registered on this account. Please contact support.",
 
@@ -61,6 +65,25 @@ export const AUTH_RESPONSE_MESSAGES = {
     "Phone number must be in E.164 format (e.g. +911234567890).",
   USER_ALREADY_EXISTS_EMAIL: "User already exists with this email address.",
   USER_NOT_FOUND_OTP: "User not found.",
+} as const;
+
+/**
+ * Account lockout policy for repeated failed logins. Thresholds are exact:
+ * the lock is applied only on the attempt whose running count equals the value.
+ */
+export const LOGIN_LOCKOUT = {
+  THRESHOLDS: {
+    FIRST: 5, // 5th failure  → temporary lock
+    SECOND: 10, // 10th failure → longer temporary lock
+    TERMINAL: 15, // 15th failure → locked until password reset
+  },
+  DURATIONS_MS: {
+    FIRST: 5 * 60 * 1000, // 5 minutes
+    SECOND: 30 * 60 * 1000, // 30 minutes
+  },
+  // Idle non-terminal counters are swept after this window. Must exceed the
+  // longest lock (30 min) so an active lock is never garbage-collected early.
+  ATTEMPT_TTL_MS: 24 * 60 * 60 * 1000,
 } as const;
 
 export const DEFAULT_PASSWORD_VALIDITY_DAYS = 90;

@@ -3,6 +3,10 @@ import { Company } from "@/db/models/company";
 import { User } from "@/db/models/user";
 import { jwtHelper } from "@/helpers/jwt";
 import {
+  clearFailedAttempts,
+  isLoginLockoutEnabled,
+} from "@/modules/auth/helpers/lockout.helper";
+import {
   buildPasswordTimestamps,
   getPasswordRotationConfig,
 } from "@/modules/auth/utils/auth.util";
@@ -96,6 +100,11 @@ export const updatePassword = async (
     },
     { new: true },
   );
+
+  // A successful reset is the only way out of a terminal lock.
+  if (isLoginLockoutEnabled()) {
+    await clearFailedAttempts(email);
+  }
 
   return { success: true, user: updatedUser };
 };

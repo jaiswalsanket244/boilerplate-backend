@@ -10,6 +10,7 @@ import {
 import { createTestSession } from "@/tests/utils/auth";
 import { STATUS, USER_TYPE } from "@/enums";
 import { ERROR_CODES } from "@/constants/error-codes";
+import { ErrorLogs } from "@/db/models/errorLogs";
 import { AUTH_RESPONSE_MESSAGES } from "@/modules/auth/utils/auth.constant";
 import { AuditLogModel } from "@/db/models/audit-logs/audit-log";
 import { drainPendingEmits } from "@/modules/audit-logs/helpers/emit.helper";
@@ -364,13 +365,15 @@ describe("POST /api/auth/login", () => {
   });
 
   // =========================================================================
-  // 4. Server Errors (3 AM engineer)
+  // 4. Password authentication rejection
   // =========================================================================
 
-  describe("server errors", () => {
-    it("returns 500 when the auth provider throws during password authentication", async () => {
+  describe("password authentication failure", () => {
+    it("returns 401 and writes no ErrorLogs row when the provider rejects the password", async () => {
+      // A wrong password surfaces as a throw from the provider. It must be
+      // treated as invalid credentials (401), not a server fault (500 + log).
       mockAuthKitProvider.authenticateWithPassword.mockRejectedValueOnce(
-        new Error("Provider is down"),
+        new Error("Invalid email or password"),
       );
 
       const { user } = await createTestSession();
@@ -380,7 +383,8 @@ describe("POST /api/auth/login", () => {
         .send(buildPasswordLoginPayload({ email: user.email }))
         .set("Accept", "application/json");
 
-      expect(res.status).toBe(500);
+      expect(res.status).toBe(401);
+      expect(await ErrorLogs.countDocuments()).toBe(0);
     });
   });
 

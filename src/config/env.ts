@@ -33,6 +33,13 @@ const envSchema = z.object({
   OTP_HASH_SECRET: z.string().min(8).default("default-otp-secret"),
   ALLOWED_ORIGINS: z.string().default("http://localhost:3000"),
 
+  // Kill switch for per-account login lockout. Set to "false" to fully restore
+  // the previous behaviour (no lock checks, no failed-attempt bookkeeping).
+  LOGIN_LOCKOUT_ENABLED: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
+
   // Number of test data
   NUM_TEST_DATA: z.coerce.number().int().positive().default(10),
 

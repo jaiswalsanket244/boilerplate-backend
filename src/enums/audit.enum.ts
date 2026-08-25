@@ -23,6 +23,7 @@ export enum AuditAction {
   USER_LOGIN_SUCCESS = "user.login.success",
   USER_LOGIN_FAILURE = "user.login.failure",
   USER_LOGIN_MFA_REQUIRED = "user.login.mfa_required",
+  USER_ACCOUNT_LOCKED = "user.account.locked",
   USER_LOGOUT = "user.logout",
   USER_STATUS_CHANGED = "user.status.changed",
   USER_ROLE_CHANGED = "user.role.changed",

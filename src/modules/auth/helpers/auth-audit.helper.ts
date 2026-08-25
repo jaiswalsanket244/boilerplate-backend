@@ -113,3 +113,21 @@ export function emitLoginFailure(
     }),
   );
 }
+
+/*
+ * Emitted when a failed attempt crosses a lockout threshold. No authenticated
+ * principal on a failed login, so route via the AUTH sentinel chain.
+ */
+export function emitAccountLocked(email: string, terminal: boolean): void {
+  runWithSubsystem(SystemSubsystem.AUTH, () =>
+    safeEmit({
+      action: AuditAction.USER_ACCOUNT_LOCKED,
+      category: AuditCategory.AUTHENTICATION,
+      status: AuditStatus.FAILURE,
+      target: { label: email ?? null },
+      failureReason: terminal
+        ? "Account locked — password reset required"
+        : "Account temporarily locked",
+    }),
+  );
+}
