@@ -229,7 +229,7 @@ describe("POST /api/auth/register", () => {
     });
 
     it("returns 400 when password is shorter than 8 characters", async () => {
-      const payload = buildRegisterPayload({ password: "abc123" });
+      const payload = buildRegisterPayload({ password: "Ab1!" });
 
       const res = await request(app)
         .post("/api/auth/register")
@@ -238,6 +238,54 @@ describe("POST /api/auth/register", () => {
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
+    });
+
+    it("returns 400 when password has no letter", async () => {
+      const payload = buildRegisterPayload({ password: "12345678!" });
+
+      const res = await request(app)
+        .post("/api/auth/register")
+        .send(payload)
+        .set("Accept", "application/json");
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+    });
+
+    it("returns 400 when password has no digit", async () => {
+      const payload = buildRegisterPayload({ password: "Password!" });
+
+      const res = await request(app)
+        .post("/api/auth/register")
+        .send(payload)
+        .set("Accept", "application/json");
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+    });
+
+    it("returns 400 when password has no special character", async () => {
+      const payload = buildRegisterPayload({ password: "Password1" });
+
+      const res = await request(app)
+        .post("/api/auth/register")
+        .send(payload)
+        .set("Accept", "application/json");
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+    });
+
+    it("accepts a valid strong password (min length + letter + digit + special)", async () => {
+      const payload = buildRegisterPayload({ password: "Passw0rd!" });
+
+      const res = await request(app)
+        .post("/api/auth/register")
+        .send(payload)
+        .set("Accept", "application/json");
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
     });
 
     it("returns 400 when name.first is missing", async () => {

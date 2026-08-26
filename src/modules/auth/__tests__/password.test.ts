@@ -24,7 +24,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * POST /api/auth/update-password
  *
  * Auth required : No
- * Body         : email (required), token (required), password (required, ≥ 6 chars)
+ * Body         : email (required), token (required), password (required, strong)
  *
  * Success  : 200 – password updated
  * Failures : 400 bad input / weak password | 401 invalid / expired token | 500 server error
@@ -209,14 +209,52 @@ describe("Password routes", () => {
         expect(res.body.success).toBe(false);
       });
 
-      it("returns 400 when password is shorter than 6 characters", async () => {
+      it("returns 400 when password is shorter than 8 characters", async () => {
         const res = await request(app)
           .post("/api/auth/update-password")
-          .send(buildUpdatePasswordPayload({ password: "abc" }))
+          .send(buildUpdatePasswordPayload({ password: "Ab1!" }))
           .set("Accept", "application/json");
 
         expect(res.status).toBe(400);
         expect(res.body.success).toBe(false);
+      });
+
+      it("returns 400 when password has no digit", async () => {
+        const res = await request(app)
+          .post("/api/auth/update-password")
+          .send(buildUpdatePasswordPayload({ password: "Password!" }))
+          .set("Accept", "application/json");
+
+        expect(res.status).toBe(400);
+        expect(res.body.success).toBe(false);
+      });
+
+      it("returns 400 when password has no special character", async () => {
+        const res = await request(app)
+          .post("/api/auth/update-password")
+          .send(buildUpdatePasswordPayload({ password: "Password1" }))
+          .set("Accept", "application/json");
+
+        expect(res.status).toBe(400);
+        expect(res.body.success).toBe(false);
+      });
+
+      it("accepts a valid strong password", async () => {
+        const { user } = await createTestSession();
+        mockJwtHelper.verifyToken.mockReturnValue({ email: user.email });
+
+        const res = await request(app)
+          .post("/api/auth/update-password")
+          .send(
+            buildUpdatePasswordPayload({
+              email: user.email,
+              password: "Passw0rd!",
+            }),
+          )
+          .set("Accept", "application/json");
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
       });
 
       it("returns 400 when the request body is empty", async () => {
