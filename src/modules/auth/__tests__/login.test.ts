@@ -286,14 +286,17 @@ describe("POST /api/auth/login", () => {
       expect(res.body.success).toBe(false);
     });
 
-    it("returns 400 when password is shorter than 6 characters", async () => {
+    it("does not reject a short password on length (login is presence-only)", async () => {
+      // Login validates legacy passwords — strength/complexity is never enforced
+      // here. A short-but-present password must pass validation and fall through
+      // to credential checking (401), not be rejected as a 400 validation error.
       const res = await request(app)
         .post("/api/auth/login")
         .send(buildPasswordLoginPayload({ password: "abc" }))
         .set("Accept", "application/json");
 
-      expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
+      expect(res.status).not.toBe(400);
+      expect(res.status).toBe(401);
     });
 
     it("returns 400 when otp is not 4 digits for otp loginType", async () => {
