@@ -10,6 +10,7 @@ import type { TUpdatePasswordResult } from "@/modules/auth/utils/auth.types";
 import { authService } from "@/providers/auth";
 import { AuthProviderError } from "@/providers/auth/utils/auth-provider.error";
 import { emailService } from "@/providers/email";
+import { clearFailedAttempts } from "@/modules/auth/helpers/lockout.helper";
 import status from "http-status";
 
 export const sendResetEmail = async (email: string) => {
@@ -96,6 +97,12 @@ export const updatePassword = async (
     },
     { new: true },
   );
+
+  // A successful reset lifts any lockout, including a terminal (reset-required)
+  // one — the only path that clears it.
+  if (envConfig.LOGIN_LOCKOUT_ENABLED) {
+    await clearFailedAttempts(email);
+  }
 
   return { success: true, user: updatedUser };
 };

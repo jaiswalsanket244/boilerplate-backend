@@ -368,7 +368,10 @@ describe("POST /api/auth/login", () => {
   // =========================================================================
 
   describe("server errors", () => {
-    it("returns 500 when the auth provider throws during password authentication", async () => {
+    it("returns 401 (not 500) when the auth provider throws during password authentication", async () => {
+      // With lockout enabled the WorkOS call is wrapped: a throw is treated as a
+      // failed credential attempt and answered 401, no ErrorLogs row. See the
+      // kill-switch-off case in lockout.test.ts for the preserved legacy 500.
       mockAuthKitProvider.authenticateWithPassword.mockRejectedValueOnce(
         new Error("Provider is down"),
       );
@@ -380,7 +383,7 @@ describe("POST /api/auth/login", () => {
         .send(buildPasswordLoginPayload({ email: user.email }))
         .set("Accept", "application/json");
 
-      expect(res.status).toBe(500);
+      expect(res.status).toBe(401);
     });
   });
 

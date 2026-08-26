@@ -26,6 +26,7 @@ export type TLoginResponse =
   | {
       error: string;
       status: number;
+      messageCode?: TErrorCode;
       user?: never;
       token?: never;
       pendingMfaToken?: never;
@@ -36,6 +37,7 @@ export type TLoginResponse =
   | {
       error: null;
       status: number;
+      messageCode?: never;
       user: IUser;
       token?: string | null;
       refreshToken?: string;

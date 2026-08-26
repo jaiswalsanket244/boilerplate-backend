@@ -47,6 +47,11 @@ export const AUTH_RESPONSE_MESSAGES = {
   ACCOUNT_DELETED: "Your account has been deleted",
   MFA_FACTOR_MISSING:
     "Multi-factor authentication is required but no factor is registered on this account. Please contact support.",
+  ACCOUNT_LOCKED:
+    "Your account is temporarily locked due to multiple failed login attempts. Please try again later.",
+  ACCOUNT_LOCKED_RESET_REQUIRED:
+    "Your account is locked after too many failed login attempts. Please reset your password to unlock it.",
+  LOGIN_RATE_LIMITED: "Too many login attempts, please try again later.",
 
   // OTP
   OTP_REQUIRED: "OTP is required for OTP login",
@@ -61,6 +66,37 @@ export const AUTH_RESPONSE_MESSAGES = {
     "Phone number must be in E.164 format (e.g. +911234567890).",
   USER_ALREADY_EXISTS_EMAIL: "User already exists with this email address.",
   USER_NOT_FOUND_OTP: "User not found.",
+} as const;
+
+/**
+ * Per-account login lockout policy. Failed password/OTP attempts are counted per
+ * email; crossing a threshold locks the account. There is no time-based decay —
+ * the counter clears only on a successful login or a successful password reset.
+ */
+export const LOGIN_LOCKOUT = {
+  // Lock triggers fire at exactly these cumulative failure counts.
+  THRESHOLDS: {
+    TEMPORARY: 5, // 5 failures  -> 5 minute lock
+    EXTENDED: 10, // 10 failures -> 30 minute lock
+    TERMINAL: 15, // 15 failures -> locked until password reset
+  },
+  DURATIONS_MS: {
+    TEMPORARY: 5 * 60 * 1000,
+    EXTENDED: 30 * 60 * 1000,
+  },
+  // Stale, non-terminal attempt records are TTL-reaped after this window of
+  // inactivity. Terminal locks persist (expiresAt is cleared) so they can only
+  // be lifted by the password-reset flow.
+  ATTEMPT_TTL_MS: 24 * 60 * 60 * 1000,
+} as const;
+
+/**
+ * Stricter per-IP rate limit for the login endpoint, on top of the global
+ * limiter. Deliberately low to slow credential-stuffing across many accounts.
+ */
+export const LOGIN_RATE_LIMIT = {
+  WINDOW_MS: 15 * 60 * 1000,
+  MAX_REQUESTS: 20,
 } as const;
 
 export const DEFAULT_PASSWORD_VALIDITY_DAYS = 90;

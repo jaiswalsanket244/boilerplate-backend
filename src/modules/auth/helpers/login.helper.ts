@@ -16,12 +16,48 @@ import { authService } from "@/providers/auth";
 import { workos } from "@/providers/auth/authkit.provider";
 import status from "http-status";
 import { generateAuthTokens } from "@/modules/auth/helpers/token.helper";
+import { ERROR_CODES } from "@/constants/error-codes";
+import {
+  clearFailedAttempts,
+  evaluateLockState,
+  recordFailedAttempt,
+} from "@/modules/auth/helpers/lockout.helper";
+import { emitAccountLocked } from "@/modules/auth/helpers/auth-audit.helper";
+
+/*
+ * Record one failed login and, if that crossed a lockout threshold, emit the
+ * account-locked audit entry. Centralised so the password and OTP branches
+ * stay in sync.
+ */
+async function noteFailedAttempt(email: string): Promise<void> {
+  const outcome = await recordFailedAttempt(email);
+  if (outcome.justLocked) {
+    emitAccountLocked(email, outcome.resetRequired);
+  }
+}
 
 /**
  * Handles the login logic for different types (password, otp)
  */
 export async function login(data: TLoginParams): Promise<TLoginResponse> {
   const { email, password, loginType, otp } = data;
+
+  // 0. Reject before touching the DB user or the auth provider if the account
+  // is currently locked out from repeated failures.
+  if (envConfig.LOGIN_LOCKOUT_ENABLED) {
+    const lockState = await evaluateLockState(email);
+    if (lockState.locked) {
+      return {
+        error: lockState.resetRequired
+          ? AUTH_RESPONSE_MESSAGES.ACCOUNT_LOCKED_RESET_REQUIRED
+          : AUTH_RESPONSE_MESSAGES.ACCOUNT_LOCKED,
+        status: status.TOO_MANY_REQUESTS,
+        messageCode: lockState.resetRequired
+          ? ERROR_CODES.ACCOUNT_LOCKED_RESET_REQUIRED
+          : ERROR_CODES.ACCOUNT_LOCKED,
+      };
+    }
+  }
 
   // 1. Find user
   const userData = await User.findOne({ email }).lean();
@@ -74,10 +110,25 @@ export async function login(data: TLoginParams): Promise<TLoginResponse> {
       }
 
       // Authenticate with Auth Provider
-      const result = await authService.authenticateWithPassword({
-        email,
-        password,
-      });
+      let result;
+      try {
+        result = await authService.authenticateWithPassword({
+          email,
+          password,
+        });
+      } catch (error) {
+        // A wrong password throws from authkit.provider (it never reaches the
+        // result.error branch). Without lockout this propagates to the global
+        // handler as a 500 + ErrorLogs row; with lockout enabled we count the
+        // failure and answer 401. Kept behind the kill switch so disabling it
+        // restores the previous 500 behaviour exactly.
+        if (!envConfig.LOGIN_LOCKOUT_ENABLED) throw error;
+        await noteFailedAttempt(email);
+        return {
+          error: AUTH_RESPONSE_MESSAGES.INVALID_CREDENTIALS,
+          status: status.UNAUTHORIZED,
+        };
+      }
 
       providerMfaRequired = Boolean(result.mfaRequired);
 
@@ -104,6 +155,9 @@ export async function login(data: TLoginParams): Promise<TLoginResponse> {
       const result = await verifyOtp(email, OTP_PURPOSE.LOGIN, otp, false);
 
       if (!result.success) {
+        if (envConfig.LOGIN_LOCKOUT_ENABLED) {
+          await noteFailedAttempt(email);
+        }
         return {
           error: result.message,
           status: result.statusCode,
@@ -128,6 +182,12 @@ export async function login(data: TLoginParams): Promise<TLoginResponse> {
       error: AUTH_RESPONSE_MESSAGES.INVALID_CREDENTIALS,
       status: status.UNAUTHORIZED,
     };
+  }
+
+  // Credentials verified — clear any accumulated failures (covers both the
+  // MFA-required and fully-authenticated exits below).
+  if (envConfig.LOGIN_LOCKOUT_ENABLED) {
+    await clearFailedAttempts(email);
   }
 
   // 5. Check account and company status
