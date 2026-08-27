@@ -1,4 +1,5 @@
 import { validationErrorHandler } from "@/helpers/validation-error";
+import { pageField, pageSizeField } from "@/validators/pagination.validation";
 import z from "zod";
 import { validate } from "zod-express-validator";
 
@@ -49,8 +50,9 @@ const SendNotificationBodySchema = z.object({
 
 const GetUsersQuerySchema = z.object({
   searchQuery: z.string().optional(),
-  page: z.string().optional(),
-  limit: z.string().optional(),
+  page: pageField,
+  // External param is `limit`, but it is a page size — bound it as one.
+  limit: pageSizeField,
 });
 
 const UploadFileQuerySchema = z.object({

@@ -1,4 +1,5 @@
 import { validationErrorHandler } from "@/helpers/validation-error";
+import { paginationQueryShape } from "@/validators/pagination.validation";
 import z from "zod";
 import { validate } from "zod-express-validator";
 
@@ -30,8 +31,7 @@ const ParamIdSchema = z.object({
 });
 
 const GetInvitedUsersQuerySchema = z.object({
-  page: z.string().optional(),
-  pageSize: z.string().optional(),
+  ...paginationQueryShape,
   search: z.string().optional(),
   status: z.string().optional(),
   companyRef: z.string().optional(),

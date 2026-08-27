@@ -1,5 +1,6 @@
 import { USER_QUERY_SUBJECT } from "@/modules/user-query/utils/user-query.enum";
 import { validationErrorHandler } from "@/helpers/validation-error";
+import { pageField, pageSizeField } from "@/validators/pagination.validation";
 import z from "zod";
 import { validate } from "zod-express-validator";
 
@@ -42,8 +43,9 @@ const CreateUserQueryValidationSchema = {
 
 export const GetAllUserQueriesValidationSchema = {
   query: z.object({
-    page: z.string().optional(),
-    size: z.string().optional(),
+    page: pageField,
+    // External param is `size`, but it is a page size — bound it as one.
+    size: pageSizeField,
     search: z.string().optional(),
     subjects: z.string().optional(),
     status: z.string().optional(),

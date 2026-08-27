@@ -3,14 +3,18 @@ import {
   DURATION,
   TIER,
 } from "@/modules/stripe-connect/utils/stripe-connect.enum";
+import {
+  pageField,
+  pageSizeField,
+  paginationQueryShape,
+} from "@/validators/pagination.validation";
 import z from "zod";
 import { validate } from "zod-express-validator";
 
 // ==================== Schemas ====================
 
 const ProductQuerySchema = z.object({
-  page: z.string().optional(),
-  pageSize: z.string().optional(),
+  ...paginationQueryShape,
   search: z.string().optional(),
 });
 
@@ -23,8 +27,7 @@ const RefundParamSchema = z.object({
 });
 
 const PastOrdersQuerySchema = z.object({
-  page: z.string().optional(),
-  pageSize: z.string().optional(),
+  ...paginationQueryShape,
   search: z.string().optional(),
 });
 
@@ -56,11 +59,14 @@ const GetEarningsQuerySchema = z.object({
 });
 
 const PaginationQuerySchema = z.object({
-  limit: z.coerce.number().optional(),
+  // `limit` is Stripe's own cursor-list page size (paired with the cursors
+  // below); bound it with pageSizeField (int 1..100, matching Stripe's cap)
+  // while keeping the external name Stripe expects.
+  limit: pageSizeField,
   starting_after: z.string().optional(),
   ending_before: z.string().optional(),
-  page: z.coerce.number().optional(),
-  pageSize: z.coerce.number().optional(),
+  page: pageField,
+  pageSize: pageSizeField,
   search: z.string().optional(),
 });
 

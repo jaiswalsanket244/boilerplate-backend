@@ -43,7 +43,9 @@ export class StripePaymentController {
         query.pageSize,
       );
 
-      const { filters, sorting } = parseQueryString(query);
+      const { filters, sorting } = parseQueryString(
+        query as Record<string, string>,
+      );
 
       const mongoFilter = getMongoFilter({
         filters,
@@ -105,7 +107,9 @@ export class StripePaymentController {
       delete queryCopy.page;
       delete queryCopy.pageSize;
 
-      const { filters, sorting } = parseQueryString(queryCopy);
+      const { filters, sorting } = parseQueryString(
+        queryCopy as Record<string, string>,
+      );
 
       const mongoFilter = getMongoFilter({
         filters,

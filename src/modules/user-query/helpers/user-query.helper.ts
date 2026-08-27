@@ -4,6 +4,8 @@ import {
   UserQuery,
 } from "@/db/models/userQuery";
 import { ObjectId } from "@/helpers/common";
+import { extractLimitAndOffset } from "@/helpers/pagination";
+import { PAGINATION } from "@/constants/pagination";
 import { createFacetPipeline } from "@/helpers/query";
 import {
   IUserQueryFilter,
@@ -25,8 +27,8 @@ class UserQueryHelper {
 
   getAllUserQueries = async (filter: IUserQueryFilter) => {
     const {
-      page = 1,
-      pageSize = 50,
+      page = PAGINATION.DEFAULT_PAGE,
+      pageSize = PAGINATION.DEFAULT_PAGE_SIZE,
       search,
       subjects,
       status,
@@ -95,8 +97,8 @@ class UserQueryHelper {
 
   parseQueryParams = (query: TGetAllUserQueriesQuery): IUserQueryFilter => {
     const {
-      page = 1,
-      size = 20,
+      page,
+      size,
       search,
       subjects,
       status,
@@ -106,9 +108,16 @@ class UserQueryHelper {
       sortOrder = "desc",
     } = query;
 
+    // Normalize the aliased `size` param to the standard page/pageSize
+    // defaults (page 1, size 10) shared across the API.
+    const { page: normalizedPage, pageSize } = extractLimitAndOffset(
+      page,
+      size,
+    );
+
     const filter: IUserQueryFilter = {
-      page: Number(page),
-      pageSize: Number(size),
+      page: normalizedPage,
+      pageSize,
       sortBy: String(sortBy),
       sortOrder: (sortOrder === "asc" ? "asc" : "desc") as "asc" | "desc",
     };
