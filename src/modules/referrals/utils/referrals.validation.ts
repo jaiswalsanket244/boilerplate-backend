@@ -1,3 +1,4 @@
+import { PAGINATION } from "@/constants/pagination";
 import { validationErrorHandler } from "@/helpers/validation-error";
 import z from "zod";
 import { validate } from "zod-express-validator";
@@ -5,10 +6,20 @@ import { DURATION } from "./referrals.enum";
 
 // ==================== Schemas ====================
 
+// Shared page/pageSize bounds so out-of-range values (page=-5,
+// pageSize=100000) are rejected up front instead of reaching the DB query.
+const pageSchema = z.coerce.number().int().min(1).optional();
+const pageSizeSchema = z.coerce
+  .number()
+  .int()
+  .min(1)
+  .max(PAGINATION.MAX_PAGE_SIZE)
+  .optional();
+
 export const GetAllReferralsQuerySchema = z.object({
   search: z.string().optional(),
-  page: z.coerce.number().optional(),
-  pageSize: z.coerce.number().optional(),
+  page: pageSchema,
+  pageSize: pageSizeSchema,
   rewardStatus: z.string().optional(),
   status: z.string().optional(),
 });
@@ -87,8 +98,8 @@ const sendReferralInviteValidator = validate(
 // ==================== Super Admin Schemas ====================
 
 const GetAllReferralsSuperAdminQuerySchema = z.object({
-  page: z.coerce.number().optional(),
-  pageSize: z.coerce.number().optional(),
+  page: pageSchema,
+  pageSize: pageSizeSchema,
   searchValue: z.string().optional(),
 });
 
