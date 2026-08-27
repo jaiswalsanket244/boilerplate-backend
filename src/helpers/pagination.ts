@@ -26,8 +26,10 @@ export const extractLimitAndOffset = (
   page?: number | string,
   pageSize?: number | string,
 ) => {
-  page = Number(page) || PAGINATION.DEFAULT_PAGE;
-  pageSize = Number(pageSize) || PAGINATION.DEFAULT_PAGE_SIZE;
+  // Defense-in-depth: even if an out-of-range value slips past schema
+  // validation, clamp to >= 1 so skips can never go negative.
+  page = Math.max(Number(page) || PAGINATION.DEFAULT_PAGE, 1);
+  pageSize = Math.max(Number(pageSize) || PAGINATION.DEFAULT_PAGE_SIZE, 1);
 
   const skips = (page - 1) * pageSize;
   return { page, pageSize, skips };
