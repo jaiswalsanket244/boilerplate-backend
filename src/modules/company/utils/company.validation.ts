@@ -1,4 +1,5 @@
 import { validationErrorHandler } from "@/helpers/validation-error";
+import { paginationQueryShape } from "@/validators/pagination.validation";
 import { USER_TYPE } from "@/enums";
 import z from "zod";
 import { validate } from "zod-express-validator";
@@ -20,8 +21,7 @@ export const ChangeUserRoleBodySchema = z.object({
 
 export const GetCompaniesQuerySchema = z
   .object({
-    page: z.coerce.number().optional(),
-    pageSize: z.coerce.number().optional(),
+    ...paginationQueryShape,
     searchValue: z.string().optional(),
   })
   .loose();

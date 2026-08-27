@@ -100,6 +100,46 @@ describe("GET Products routes", () => {
       });
     });
 
+    describe("pagination validation", () => {
+      it("returns 400 for a negative page", async () => {
+        const session = await createAdminSession();
+
+        const res = await request(app)
+          .get("/api/products?page=-1")
+          .set("Cookie", session.cookie)
+          .set("Accept", "application/json");
+
+        expect(res.status).toBe(400);
+        expect(res.body.success).toBe(false);
+      });
+
+      it("returns 400 when pageSize exceeds the max of 100", async () => {
+        const session = await createAdminSession();
+
+        const res = await request(app)
+          .get("/api/products?pageSize=101")
+          .set("Cookie", session.cookie)
+          .set("Accept", "application/json");
+
+        expect(res.status).toBe(400);
+        expect(res.body.success).toBe(false);
+      });
+
+      it("returns 200 with correct pagination metadata for a valid request", async () => {
+        const session = await createAdminSession();
+        await seedProduct(session.company._id);
+
+        const res = await request(app)
+          .get("/api/products?page=1&pageSize=5")
+          .set("Cookie", session.cookie)
+          .set("Accept", "application/json");
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.pagination.currentPage).toBe(1);
+        expect(res.body.data.pagination.pageSize).toBe(5);
+      });
+    });
+
     describe("auth errors", () => {
       it("returns 401 when no token is provided", async () => {
         const res = await request(app)

@@ -1,12 +1,12 @@
 import { validationErrorHandler } from "@/helpers/validation-error";
+import { paginationQueryShape } from "@/validators/pagination.validation";
 import z from "zod";
 import { validate } from "zod-express-validator";
 
 // ==================== Schemas ====================
 
 export const GetProductsQuerySchema = z.object({
-  page: z.coerce.number().optional(),
-  pageSize: z.coerce.number().optional(),
+  ...paginationQueryShape,
   searchValue: z.string().optional(),
   sortBy: z.string().optional(),
 });

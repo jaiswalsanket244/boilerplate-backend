@@ -1,4 +1,5 @@
 import { validationErrorHandler } from "@/helpers/validation-error";
+import { paginationQueryShape } from "@/validators/pagination.validation";
 import z from "zod";
 import { validate } from "zod-express-validator";
 import { NOTIFICATION_TYPE } from "@/enums";
@@ -25,8 +26,7 @@ const UpdatePreferenceBodySchema = z.object({
 
 const GetNotificationsQuerySchema = z
   .object({
-    page: z.coerce.number().optional(),
-    pageSize: z.coerce.number().optional(),
+    ...paginationQueryShape,
   })
   .passthrough();
 

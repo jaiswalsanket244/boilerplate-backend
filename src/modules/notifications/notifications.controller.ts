@@ -3,6 +3,7 @@ import { NOTIFICATION_MESSAGES } from "@/modules/notifications/utils/notificatio
 import { TNotificationsController } from "@/modules/notifications/utils/notifications.types";
 import { SuccessResponse } from "@/helpers/api-response";
 import { ObjectId } from "@/helpers/common";
+import { extractLimitAndOffset } from "@/helpers/pagination";
 import { PaginatedSearchQuery } from "@/types/query.types";
 import { NextFunction, Request, Response } from "express";
 import httpStatus from "http-status";
@@ -23,14 +24,15 @@ export class NotificationsController {
       const userRef = req.user!._id;
 
       const query: PaginatedSearchQuery = req.query;
+      const { page, pageSize } = extractLimitAndOffset(
+        query.page,
+        query.pageSize,
+      );
       const data = await notificationsHelper.findAll(
         {
           userRef,
         },
-        {
-          page: Number(query.page ?? 1),
-          pageSize: Number(query.pageSize ?? 50),
-        },
+        { page, pageSize },
       );
       return SuccessResponse(res, httpStatus.OK, {
         message: NOTIFICATION_MESSAGES.DATA_RETRIEVED,

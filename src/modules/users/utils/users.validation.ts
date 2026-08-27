@@ -1,4 +1,5 @@
 import { validationErrorHandler } from "@/helpers/validation-error";
+import { paginationQueryShape } from "@/validators/pagination.validation";
 import { USER_TYPE } from "@/enums";
 import {
   USER_ANALYTICS_DURATION,
@@ -36,8 +37,7 @@ export const ChangePasswordBodySchema = z
   });
 
 export const GetUsersQuerySchema = z.object({
-  page: z.coerce.number().optional(),
-  pageSize: z.coerce.number().optional(),
+  ...paginationQueryShape,
   search: z.string().optional(),
 });
 
