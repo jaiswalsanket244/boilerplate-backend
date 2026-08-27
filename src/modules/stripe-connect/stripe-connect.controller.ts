@@ -37,7 +37,9 @@ export class StripeConnectController {
         query.pageSize,
       );
 
-      const { filters, sorting } = parseQueryString(req.query);
+      const { filters, sorting } = parseQueryString(
+        req.query as Record<string, string>,
+      );
 
       const mongoFilter = getMongoFilter({
         filters,
@@ -232,7 +234,9 @@ export class StripeConnectController {
       delete queryCopy.page;
       delete queryCopy.pageSize;
 
-      const { filters, sorting } = parseQueryString(queryCopy);
+      const { filters, sorting } = parseQueryString(
+        queryCopy as Record<string, string>,
+      );
 
       const mongoFilter = getMongoFilter({
         filters,

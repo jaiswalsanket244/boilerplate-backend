@@ -1,19 +1,22 @@
 import { validationErrorHandler } from "@/helpers/validation-error";
 import { DURATION } from "@/modules/stripe-payment/utils/stripe-payment.enum";
+import {
+  pageField,
+  pageSizeField,
+  paginationQueryShape,
+} from "@/validators/pagination.validation";
 import z from "zod";
 import { validate } from "zod-express-validator";
 
 // ==================== Schemas ====================
 
 const ProductQuerySchema = z.object({
-  page: z.string().optional(),
-  pageSize: z.string().optional(),
+  ...paginationQueryShape,
   search: z.string().optional(),
 });
 
 const PastOrdersQuerySchema = z.object({
-  page: z.string().optional(),
-  pageSize: z.string().optional(),
+  ...paginationQueryShape,
   search: z.string().optional(),
 });
 
@@ -127,11 +130,14 @@ const UpdatePromotionCodeBodySchema = z.object({
 });
 
 const PaginationQuerySchema = z.object({
-  limit: z.string().optional(),
+  // `limit` is Stripe's own cursor-list page size (paired with the cursors
+  // below); bound it with pageSizeField (int 1..100, matching Stripe's cap)
+  // while keeping the external name Stripe expects.
+  limit: pageSizeField,
   starting_after: z.string().optional(),
   ending_before: z.string().optional(),
-  page: z.string().optional(),
-  pageSize: z.string().optional(),
+  page: pageField,
+  pageSize: pageSizeField,
   search: z.string().optional(),
 });
 

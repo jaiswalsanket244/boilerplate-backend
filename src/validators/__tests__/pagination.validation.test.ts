@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { PAGINATION } from "@/constants/pagination";
-import { pageQuerySchema } from "@/validators/pagination.validation";
+import {
+  pageField,
+  pageSizeField,
+  pageQuerySchema,
+} from "@/validators/pagination.validation";
 
 describe("pageQuerySchema", () => {
   describe("valid values", () => {
@@ -74,5 +78,35 @@ describe("pageQuerySchema", () => {
     it("rejects a non-numeric string", () => {
       expect(pageQuerySchema.safeParse({ page: "abc" }).success).toBe(false);
     });
+  });
+});
+
+describe("pageField / pageSizeField", () => {
+  it("coerce numeric strings to integers", () => {
+    expect(pageField.parse("3")).toBe(3);
+    expect(pageSizeField.parse("25")).toBe(25);
+  });
+
+  it("allow undefined so downstream defaults apply", () => {
+    expect(pageField.parse(undefined)).toBeUndefined();
+    expect(pageSizeField.parse(undefined)).toBeUndefined();
+  });
+
+  it("reject out-of-range and non-integer values", () => {
+    expect(pageField.safeParse(0).success).toBe(false);
+    expect(pageField.safeParse(-1).success).toBe(false);
+    expect(pageField.safeParse(1.5).success).toBe(false);
+    expect(pageField.safeParse(PAGINATION.MAX_PAGE + 1).success).toBe(false);
+    expect(pageSizeField.safeParse(0).success).toBe(false);
+    expect(pageSizeField.safeParse(PAGINATION.MAX_PAGE_SIZE + 1).success).toBe(
+      false,
+    );
+  });
+
+  it("accept the boundary maximums", () => {
+    expect(pageField.parse(PAGINATION.MAX_PAGE)).toBe(PAGINATION.MAX_PAGE);
+    expect(pageSizeField.parse(PAGINATION.MAX_PAGE_SIZE)).toBe(
+      PAGINATION.MAX_PAGE_SIZE,
+    );
   });
 });

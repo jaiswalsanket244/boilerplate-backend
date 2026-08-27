@@ -325,8 +325,8 @@ export class StripePaymentAdminController {
       const searchValue = query.search as string;
 
       const { page, pageSize, skips } = extractLimitAndOffset(
-        query.page as string,
-        query.pageSize as string,
+        query.page,
+        query.pageSize,
       );
 
       const queryCopy = { ...query };
