@@ -1,4 +1,5 @@
 import { validationErrorHandler } from "@/helpers/validation-error";
+import { paginationQueryShape } from "@/validators/pagination.validation";
 import z from "zod";
 import { validate } from "zod-express-validator";
 import { DURATION } from "./referrals.enum";
@@ -7,8 +8,7 @@ import { DURATION } from "./referrals.enum";
 
 export const GetAllReferralsQuerySchema = z.object({
   search: z.string().optional(),
-  page: z.coerce.number().optional(),
-  pageSize: z.coerce.number().optional(),
+  ...paginationQueryShape,
   rewardStatus: z.string().optional(),
   status: z.string().optional(),
 });
@@ -87,8 +87,7 @@ const sendReferralInviteValidator = validate(
 // ==================== Super Admin Schemas ====================
 
 const GetAllReferralsSuperAdminQuerySchema = z.object({
-  page: z.coerce.number().optional(),
-  pageSize: z.coerce.number().optional(),
+  ...paginationQueryShape,
   searchValue: z.string().optional(),
 });
 

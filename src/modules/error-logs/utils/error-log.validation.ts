@@ -1,6 +1,7 @@
 import { ERROR_TYPE } from "@/enums";
 import { SORT_BY } from "@/modules/error-logs/utils/error-log.enum";
 import { validationErrorHandler } from "@/helpers/validation-error";
+import { paginationQueryShape } from "@/validators/pagination.validation";
 import z from "zod";
 import { validate } from "zod-express-validator";
 
@@ -14,8 +15,7 @@ export const GetErrorsQuerySchema = z
   .object({
     errorType: z.enum([ERROR_TYPE.GENERIC, ERROR_TYPE.EMAIL]),
     sortBy: z.enum([SORT_BY.OLDEST, SORT_BY.NEWEST]),
-    page: z.coerce.number().optional(),
-    pageSize: z.coerce.number().optional(),
+    ...paginationQueryShape,
     startDate: z.string().optional(),
     endDate: z.string().optional(),
   })
