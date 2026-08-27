@@ -2,6 +2,7 @@ import { z } from "zod";
 import { validate } from "zod-express-validator";
 
 import { validationErrorHandler } from "@/helpers/validation-error";
+import { paginationQueryShape } from "@/validators/pagination.validation";
 import { AuditStatus } from "@/enums/audit.enum";
 import {
   SYSTEM_REF_PREFIX,
@@ -38,16 +39,13 @@ const ISO_DATE = z
     message: "Invalid date",
   });
 
-const MAX_PAGE = 10000;
-
 const HIDE_INTERNAL_CHANGES = z
   .enum(["true", "false"])
   .transform((v) => v === "true")
   .optional();
 
 const baseQueryShape = {
-  page: z.coerce.number().int().min(1).max(MAX_PAGE).optional(),
-  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+  ...paginationQueryShape,
   category: z.string().min(1).max(64).optional(),
   action: z.string().min(1).max(128).optional(),
   actorId: z.string().regex(OBJECT_ID_REGEX).optional(),
