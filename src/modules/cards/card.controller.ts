@@ -40,7 +40,7 @@ export class CardController {
       return SuccessResponse(res, httpStatus.OK, {
         message: CARD_MESSAGES.CARDS_FETCHED_SUCCESS,
         data: {
-          cards: cards.data,
+          cards: cards.data.map(cardHelper.mapCardForResponse),
           defaultPaymentMethodId,
         },
       });
