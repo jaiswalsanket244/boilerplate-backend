@@ -2,7 +2,7 @@ import status from "http-status";
 import { userQueryHelper } from "@/modules/user-query/helpers/user-query.helper";
 import { TUserQueryController } from "@/modules/user-query/utils/user-query.types";
 import { USER_TYPE } from "@/enums";
-import { SuccessResponse } from "@/helpers/api-response";
+import { ErrorResponse, SuccessResponse } from "@/helpers/api-response";
 import { USER_QUERY_MESSAGES } from "@/modules/user-query/utils/user-query.constant";
 
 /**
@@ -86,7 +86,7 @@ export class UserQueryController {
       });
 
       if (!userQuery) {
-        return SuccessResponse(res, status.NOT_FOUND, {
+        return ErrorResponse(res, status.NOT_FOUND, {
           message: USER_QUERY_MESSAGES.NOT_FOUND,
         });
       }
