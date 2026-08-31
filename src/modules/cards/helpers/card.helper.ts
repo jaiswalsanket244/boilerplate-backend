@@ -45,9 +45,7 @@ class CardHelper {
     customer: Stripe.Customer,
   ): string | null | undefined => {
     return customer.invoice_settings?.default_payment_method as
-      | string
-      | null
-      | undefined;
+      string | null | undefined;
   };
 
   /**
@@ -55,6 +53,22 @@ class CardHelper {
    */
   createSetupIntent = async (customerId: string) => {
     return this.stripe.setupIntents.create({ customer: customerId });
+  };
+
+  /**
+   * Retrieve a single payment method from Stripe
+   */
+  getPaymentMethod = async (paymentMethodId: string) => {
+    return this.stripe.paymentMethods.retrieve(paymentMethodId);
+  };
+
+  /**
+   * Detach (remove) a payment method from its customer. Stripe automatically
+   * clears the customer's default payment method when the detached card was
+   * the default, so no extra cleanup is required here.
+   */
+  detachCard = async (paymentMethodId: string) => {
+    return this.stripe.paymentMethods.detach(paymentMethodId);
   };
 
   /**
