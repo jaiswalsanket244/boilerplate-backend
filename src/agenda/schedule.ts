@@ -12,4 +12,6 @@ export async function syncRecurringJobs(): Promise<void> {
     JOBS.SECURITY.PASSWORD_EXPIRY_REMINDERS,
   ); // daily 09:00
   await agendaService.every("0 2 * * *", JOBS.AUDIT.RETENTION_SWEEP); // daily 02:00
+  await agendaService.every("0 8 * * *", JOBS.NOTIFICATIONS.SEND_DAILY_DIGEST); // daily 08:00
+  await agendaService.every("0 8 * * 1", JOBS.NOTIFICATIONS.SEND_WEEKLY_DIGEST); // weekly Monday 08:00
 }

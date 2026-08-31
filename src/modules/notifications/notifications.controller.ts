@@ -243,13 +243,12 @@ export class NotificationsController {
   ) => {
     try {
       const userRef = req.user!._id;
-      const { type, channels } = req.body;
+      const { type, channels, digestFrequency } = req.body;
 
-      const data = await notificationsHelper.updatePreference(
-        userRef,
-        type,
+      const data = await notificationsHelper.updatePreference(userRef, type, {
         channels,
-      );
+        digestFrequency,
+      });
       return SuccessResponse(res, httpStatus.OK, {
         message: NOTIFICATION_MESSAGES.PREFERENCES_UPDATED,
         data,

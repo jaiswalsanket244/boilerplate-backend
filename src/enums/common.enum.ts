@@ -67,6 +67,13 @@ export enum NOTIFICATION_TYPE {
   PROFILE_AND_PASSWORD = "profile_and_password",
 }
 
+// Per-category digest cadence. `off` preserves the current immediate behaviour.
+export enum DIGEST_FREQUENCY {
+  OFF = "off",
+  DAILY = "daily",
+  WEEKLY = "weekly",
+}
+
 export enum NOTIFICATION_TITLE {
   PASSWORD_CHANGED = "Password changed",
 }

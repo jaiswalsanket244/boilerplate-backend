@@ -1,7 +1,7 @@
 import { validationErrorHandler } from "@/helpers/validation-error";
 import z from "zod";
 import { validate } from "zod-express-validator";
-import { NOTIFICATION_TYPE } from "@/enums";
+import { DIGEST_FREQUENCY, NOTIFICATION_TYPE } from "@/enums";
 
 // ==================== Schemas ====================
 
@@ -18,10 +18,17 @@ const UpdateNotificationBodySchema = z.object({
   update: z.record(z.string(), z.any()),
 });
 
-const UpdatePreferenceBodySchema = z.object({
-  type: z.enum(NOTIFICATION_TYPE),
-  channels: z.record(z.string(), z.boolean()),
-});
+// `channels` and `digestFrequency` are both optional: channel-only clients keep
+// working, and a client may update either the toggles or the cadence alone.
+const UpdatePreferenceBodySchema = z
+  .object({
+    type: z.enum(NOTIFICATION_TYPE),
+    channels: z.record(z.string(), z.boolean()).optional(),
+    digestFrequency: z.enum(DIGEST_FREQUENCY).optional(),
+  })
+  .refine((body) => body.channels !== undefined || body.digestFrequency, {
+    message: "Provide channels or digestFrequency to update.",
+  });
 
 const GetNotificationsQuerySchema = z
   .object({

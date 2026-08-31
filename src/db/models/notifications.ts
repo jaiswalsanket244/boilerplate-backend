@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { NOTIFICATION_TYPE } from "@/enums";
 const ObjectId = mongoose.Schema.Types.ObjectId;
 
 export interface INotifications {
@@ -9,6 +10,12 @@ export interface INotifications {
   isOpened: boolean;
   companyRef?: mongoose.Types.ObjectId;
   redirectUrl?: string;
+  // Category this notification belongs to. Optional so legacy/untyped
+  // notifications remain valid; the digest job only picks up typed ones.
+  type?: NOTIFICATION_TYPE;
+  // Set once this notification has been included in a sent digest email, so a
+  // later digest run never re-sends it. Individual delivery today is push-only.
+  digestedAt?: Date | null;
 }
 
 export interface INotificationsDocument
@@ -46,6 +53,16 @@ const NotificationSchema = new mongoose.Schema<INotificationsDocument>(
     redirectUrl: {
       type: String,
       required: false,
+    },
+    type: {
+      type: String,
+      enum: Object.values(NOTIFICATION_TYPE),
+      required: false,
+    },
+    digestedAt: {
+      type: Date,
+      required: false,
+      default: null,
     },
   },
   { timestamps: true },
