@@ -25,6 +25,11 @@ export class CardRouter {
         "/default",
         cardValidators.setDefaultCard,
         controller.setDefaultCard,
+      )
+      .delete(
+        "/:paymentMethodId",
+        cardValidators.removeCard,
+        controller.removeCard,
       );
   }
 }

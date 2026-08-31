@@ -117,4 +117,45 @@ export class CardController {
       next(error);
     }
   };
+
+  /**
+   * Remove (detach) a saved card for the authenticated user.
+   */
+  removeCard: TCardController["removeCard"] = async (req, res, next) => {
+    const user = req.user;
+
+    if (!user?.stripeCustomerId) {
+      return ErrorResponse(res, httpStatus.BAD_REQUEST, {
+        message: CARD_MESSAGES.STRIPE_CUSTOMER_ID_NOT_FOUND,
+      });
+    }
+
+    try {
+      const { paymentMethodId } = req.params;
+      const customerId = user.stripeCustomerId;
+
+      const paymentMethod = await cardHelper.getPaymentMethod(paymentMethodId);
+      const ownerId =
+        typeof paymentMethod.customer === "string"
+          ? paymentMethod.customer
+          : paymentMethod.customer?.id;
+
+      // Ownership guard: only detach when the card belongs to the caller.
+      // Return 404 (not 403) on a mismatch so the endpoint never reveals
+      // that another customer owns this payment method.
+      if (ownerId !== customerId) {
+        return ErrorResponse(res, httpStatus.NOT_FOUND, {
+          message: CARD_MESSAGES.CARD_NOT_FOUND,
+        });
+      }
+
+      await cardHelper.detachCard(paymentMethodId);
+
+      return SuccessResponse(res, httpStatus.OK, {
+        message: CARD_MESSAGES.CARD_REMOVED_SUCCESS,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

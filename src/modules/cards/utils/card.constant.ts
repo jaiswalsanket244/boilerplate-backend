@@ -6,4 +6,6 @@ export const CARD_MESSAGES = {
   CUSTOMER_NOT_FOUND: "Customer not found or deleted.",
   STRIPE_CUSTOMER_ID_NOT_FOUND: "Stripe customer ID not found.",
   UNAUTHORIZED: "Unauthorized",
+  CARD_REMOVED_SUCCESS: "Card removed successfully.",
+  CARD_NOT_FOUND: "Card not found.",
 } as const;
