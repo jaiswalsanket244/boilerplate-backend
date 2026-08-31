@@ -33,6 +33,16 @@ const envSchema = z.object({
   OTP_HASH_SECRET: z.string().min(8).default("default-otp-secret"),
   ALLOWED_ORIGINS: z.string().default("http://localhost:3000"),
 
+  // Maintenance mode — surfaced publicly via GET /api/maintenance for the
+  // frontend banner. Env values arrive as strings; z.coerce.boolean() would
+  // treat any non-empty string (including "false") as true, so parse the
+  // literal "true" explicitly and let everything else fall back to false.
+  MAINTENANCE_MODE: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true"),
+  MAINTENANCE_MESSAGE: z.string().default(""),
+
   // Number of test data
   NUM_TEST_DATA: z.coerce.number().int().positive().default(10),
 

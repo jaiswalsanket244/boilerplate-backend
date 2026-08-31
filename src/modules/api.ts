@@ -14,6 +14,7 @@ import { ChatRouter } from "@/modules/chat";
 import { UserQueryRouter } from "@/modules/user-query";
 import { FileUploadRouter } from "@/modules/file-upload";
 import { E2eSupportRouter } from "@/modules/e2e-support";
+import { MaintenanceRouter } from "@/modules/maintenance";
 import { isDevEnvironment } from "@/helpers/common";
 
 const middleware = new Middleware();
@@ -24,6 +25,7 @@ api.use(middleware.jwtDecoder);
 api.use("/admin", new AdminRouter().router);
 api.use("/super-admin", new SuperAdminRouter().router);
 api.use("/system", new SystemRouter().router);
+api.use("/maintenance", new MaintenanceRouter().router);
 api.use("/auth", new AuthRouter().router);
 api.use("/user", new UserRouter().router);
 api.use("/aws", new FileUploadRouter().router);
