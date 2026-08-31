@@ -4,6 +4,8 @@ import { StripeConnectHelper } from "@/agenda/helpers/stripe-connect.helper";
 import { deletePreviousMonthEntries } from "@/agenda/helpers/error-logs.helper";
 import { sendPasswordRotationReminders } from "@/agenda/helpers/password-rotation.helper";
 import { runAuditRetentionSweep } from "@/agenda/helpers/audit-retention.helper";
+import { sendNotificationDigests } from "@/agenda/helpers/notification-digest.helper";
+import { DIGEST_FREQUENCY } from "@/enums";
 
 // Register every job definition. Call once, before agenda.start().
 export function registerAllJobs(agenda: Agenda): void {
@@ -38,4 +40,14 @@ export function registerAllJobs(agenda: Agenda): void {
       backoff: backoffStrategies.exponential({ delay: 60_000, maxRetries: 3 }),
     },
   );
+
+  // Single-attempt — sends email; the digestedAt marker already guards against
+  // re-sends across runs, but a retry within a run could double-send.
+  agenda.define(JOBS.NOTIFICATIONS.SEND_DAILY_DIGEST, async () => {
+    await sendNotificationDigests(DIGEST_FREQUENCY.DAILY);
+  });
+
+  agenda.define(JOBS.NOTIFICATIONS.SEND_WEEKLY_DIGEST, async () => {
+    await sendNotificationDigests(DIGEST_FREQUENCY.WEEKLY);
+  });
 }

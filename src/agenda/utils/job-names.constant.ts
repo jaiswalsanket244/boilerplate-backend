@@ -15,4 +15,8 @@ export const JOBS = {
   AUDIT: {
     RETENTION_SWEEP: "audit:retention-sweep",
   },
+  NOTIFICATIONS: {
+    SEND_DAILY_DIGEST: "notifications:send-daily-digest",
+    SEND_WEEKLY_DIGEST: "notifications:send-weekly-digest",
+  },
 } as const;

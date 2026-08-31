@@ -1,9 +1,9 @@
 import { type INotifications, Notification } from "@/db/models/notifications";
 import { UserNotificationPreference } from "@/db/models/userNotificationPreference";
-import { NOTIFICATION_TYPE } from "@/enums";
+import { DIGEST_FREQUENCY, NOTIFICATION_TYPE } from "@/enums";
 import {
   ICreateNotificationOptions,
-  INotificationChannels,
+  IUpdatePreferenceInput,
   IUserNotificationPreference,
   TNotification,
 } from "@/modules/notifications/utils/notifications.types";
@@ -87,20 +87,26 @@ class NotificationsHelper {
   async updatePreference(
     userRef: TObjectId,
     type: NOTIFICATION_TYPE,
-    channels: Partial<INotificationChannels>,
+    update: IUpdatePreferenceInput,
   ): Promise<IUserNotificationPreference | null> {
     const doc = await this.addPreferences(userRef);
 
     const { preferences } = doc.toJSON();
 
+    const { channels, digestFrequency } = update;
     const updatedPreferences = {
       ...preferences,
-      [type]: { ...preferences[type], ...channels },
+      [type]: {
+        ...preferences[type],
+        ...channels,
+        ...(digestFrequency ? { digestFrequency } : {}),
+      },
     };
 
     return UserNotificationPreference.findOneAndUpdate(
       { userRef },
       { preferences: updatedPreferences },
+      { new: true },
     );
   }
 
@@ -123,6 +129,42 @@ class NotificationsHelper {
     return UserNotificationPreference.find({
       userRef: { $in: userRefs },
     }).lean();
+  }
+
+  /*
+  Preference docs where at least one category is set to `frequency`. The Map is
+  stored as a nested object, so we OR over the known categories with dot-notation
+  rather than scanning arbitrary keys.
+  */
+  async getPreferencesByDigestFrequency(frequency: DIGEST_FREQUENCY) {
+    const orConditions = Object.values(NOTIFICATION_TYPE).map((type) => ({
+      [`preferences.${type}.digestFrequency`]: frequency,
+    }));
+
+    return UserNotificationPreference.find({ $or: orConditions }).lean();
+  }
+
+  /*
+  Unread, not-yet-digested notifications for a user in the given categories.
+  Excluding `digestedAt` (rather than flipping `isOpened`) keeps digested items
+  unread in-app while guaranteeing they are never included in a second digest.
+  */
+  async findDigestableNotifications(
+    userRef: TObjectId,
+    types: NOTIFICATION_TYPE[],
+  ) {
+    return Notification.find({
+      userRef,
+      isOpened: false,
+      digestedAt: null,
+      type: { $in: types },
+    })
+      .sort({ createdAt: 1 })
+      .lean();
+  }
+
+  async markAsDigested(ids: TObjectId[], digestedAt: Date) {
+    return Notification.updateMany({ _id: { $in: ids } }, { digestedAt });
   }
 }
 

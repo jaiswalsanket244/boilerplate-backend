@@ -106,6 +106,7 @@ export class UserController {
           message,
           companyRef,
           userRef: user._id,
+          type: NOTIFICATION_TYPE.PROFILE_AND_PASSWORD,
         },
         {
           createNotificationInDb: true,
@@ -199,6 +200,7 @@ export class UserController {
           message,
           companyRef,
           userRef: userId,
+          type: NOTIFICATION_TYPE.PROFILE_AND_PASSWORD,
         },
         {
           createNotificationInDb: true,

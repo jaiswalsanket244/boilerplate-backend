@@ -54,6 +54,7 @@ export class SuperAdminUsersController {
           message,
           title: "Profile Update",
           companyRef: ObjectId(companyRef),
+          type: NOTIFICATION_TYPE.PROFILE_AND_PASSWORD,
           redirectUrl: `${envConfig.FRONTEND_HOST}/profile/profile-settings`,
         },
         {
@@ -131,6 +132,7 @@ export class SuperAdminUsersController {
           message,
           userRef: ObjectId(userRef),
           companyRef: companyRef?._id,
+          type: NOTIFICATION_TYPE.PROFILE_AND_PASSWORD,
           redirectUrl: `${envConfig.FRONTEND_HOST}/profile/profile-settings/password`,
         },
         {

@@ -1,5 +1,10 @@
-import { NOTIFICATION_CHANNEL, NOTIFICATION_TYPE } from "@/enums";
 import {
+  DIGEST_FREQUENCY,
+  NOTIFICATION_CHANNEL,
+  NOTIFICATION_TYPE,
+} from "@/enums";
+import {
+  INotificationCategoryPreference,
   INotificationChannels,
   IUserNotificationPreference,
 } from "@/modules/notifications/utils/notifications.types";
@@ -33,20 +38,21 @@ export const getNotificationChannels = (
 
 export const generateDefaultNotificationPreferences = (): Record<
   NOTIFICATION_TYPE,
-  INotificationChannels
+  INotificationCategoryPreference
 > => {
-  const channels = {
+  const categoryPreference: INotificationCategoryPreference = {
     [NOTIFICATION_CHANNEL.PUSH]: true,
     [NOTIFICATION_CHANNEL.EMAIL]: false,
     [NOTIFICATION_CHANNEL.IN_APP]: false,
+    digestFrequency: DIGEST_FREQUENCY.OFF,
   };
 
   const defaults = Object.values(NOTIFICATION_TYPE).reduce(
     (acc, type) => {
-      acc[type] = { ...channels };
+      acc[type] = { ...categoryPreference };
       return acc;
     },
-    {} as Record<NOTIFICATION_TYPE, INotificationChannels>,
+    {} as Record<NOTIFICATION_TYPE, INotificationCategoryPreference>,
   );
 
   return defaults;

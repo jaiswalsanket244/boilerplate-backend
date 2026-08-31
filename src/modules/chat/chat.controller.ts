@@ -126,6 +126,7 @@ export class ChatController {
           companyRef: ObjectId(companyRef),
           message,
           title: CHAT_NOTIFICATION_MESSAGES.NEW_DM,
+          type: NOTIFICATION_TYPE.CHAT_MESSAGE,
           redirectUrl: `${envConfig.FRONTEND_HOST}${CHAT_ROUTE_PATH}?channel_id=${channelId}`,
         },
         {
@@ -333,6 +334,7 @@ export class ChatController {
             userRef: user._id,
             title: `New message ${isGroup ? "in" : "from"} ${channelName}`,
             message,
+            type: NOTIFICATION_TYPE.CHAT_MESSAGE,
             redirectUrl: `${envConfig.FRONTEND_HOST}${CHAT_ROUTE_PATH}?channel_id=${channelId}`,
           },
           {
