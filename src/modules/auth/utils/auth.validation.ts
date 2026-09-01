@@ -1,6 +1,7 @@
 import { OTP_PURPOSE } from "@/db/models/otpVerification";
 import { SOCIAL_OAUTH_METHOD } from "@/enums/auth.enum";
 import { MFA_RESET_IDENTITY_METHOD } from "@/modules/auth/utils/auth.enum";
+import { passwordPolicySchema } from "@/modules/auth/utils/password.constant";
 import { validatePhoneNumber } from "@/helpers/common";
 import { validationErrorHandler } from "@/helpers/validation-error";
 import z from "zod";
@@ -14,7 +15,7 @@ const nameSchema = z.object({
 export const RegisterBodySchema = z.object({
   name: nameSchema,
   email: z.email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters long"),
+  password: passwordPolicySchema,
   oauth: z.enum(SOCIAL_OAUTH_METHOD).optional(),
   referralCode: z.string().optional(),
   inviteToken: z.string().optional(),
@@ -22,10 +23,10 @@ export const RegisterBodySchema = z.object({
 
 export const LoginBodySchema = z.object({
   email: z.email("Invalid email address"),
-  password: z
-    .string()
-    .min(6, "Password must be at least 6 characters long")
-    .optional(),
+  // Login authenticates an EXISTING credential — it must not enforce the
+  // password strength policy, or legacy users with older passwords would be
+  // locked out. Presence-only check; strength is enforced on password creation.
+  password: z.string().min(1, "Password is required").optional(),
   loginType: z.enum(["otp", "password"]),
   otp: z.string().length(4, "OTP must be 4 digits long").optional(),
 });
@@ -60,7 +61,7 @@ export const UpdatePasswordValidationSchema = {
   body: z.object({
     email: z.email("Invalid email address"),
     token: z.string().min(1, "Token is required"),
-    password: z.string().min(6, "Password must be at least 6 characters long"),
+    password: passwordPolicySchema,
   }),
 } as const;
 
@@ -102,6 +103,8 @@ export const TwoFactorVerifyValidationSchema = {
 export const TwoFactorLoginValidationSchema = {
   body: z.object({
     email: z.email("Invalid email address"),
+    // Two-factor login authenticates an existing credential — presence only,
+    // no strength policy (see LoginBodySchema).
     password: z.string().min(1, "Password is required"),
     token: z.string().min(1, "Token is required"),
   }),

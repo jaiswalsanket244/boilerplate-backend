@@ -209,10 +209,20 @@ describe("Password routes", () => {
         expect(res.body.success).toBe(false);
       });
 
-      it("returns 400 when password is shorter than 6 characters", async () => {
+      it("returns 400 when password is shorter than 8 characters", async () => {
         const res = await request(app)
           .post("/api/auth/update-password")
-          .send(buildUpdatePasswordPayload({ password: "abc" }))
+          .send(buildUpdatePasswordPayload({ password: "Aa@1" }))
+          .set("Accept", "application/json");
+
+        expect(res.status).toBe(400);
+        expect(res.body.success).toBe(false);
+      });
+
+      it("returns 400 when password does not meet the character-mix policy", async () => {
+        const res = await request(app)
+          .post("/api/auth/update-password")
+          .send(buildUpdatePasswordPayload({ password: "strongpass123" }))
           .set("Accept", "application/json");
 
         expect(res.status).toBe(400);
