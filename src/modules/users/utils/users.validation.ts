@@ -1,4 +1,5 @@
 import { validationErrorHandler } from "@/helpers/validation-error";
+import { passwordSchema } from "@/helpers/password";
 import { USER_TYPE } from "@/enums";
 import {
   USER_ANALYTICS_DURATION,
@@ -27,7 +28,7 @@ export const UpdateProfileBodySchema = z
 export const ChangePasswordBodySchema = z
   .object({
     currentPassword: z.string().min(1, "Current password is required"),
-    newPassword: z.string().min(1, "New password is required"),
+    newPassword: passwordSchema,
     confirmedPassword: z.string().min(1, "Confirmed password is required"),
   })
   .refine((data) => data.newPassword === data.confirmedPassword, {
@@ -72,7 +73,7 @@ export const UpdateUserProfileBodySchema = z.object({
 
 export const ChangeUserPasswordBodySchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
-  newPassword: z.string().min(1, "New password is required"),
+  newPassword: passwordSchema,
   confirmedPassword: z.string().min(1, "Confirmed password is required"),
 });
 

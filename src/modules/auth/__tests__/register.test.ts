@@ -229,7 +229,20 @@ describe("POST /api/auth/register", () => {
     });
 
     it("returns 400 when password is shorter than 8 characters", async () => {
-      const payload = buildRegisterPayload({ password: "abc123" });
+      const payload = buildRegisterPayload({ password: "Ab@123" });
+
+      const res = await request(app)
+        .post("/api/auth/register")
+        .send(payload)
+        .set("Accept", "application/json");
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+    });
+
+    it("returns 400 when password lacks the required character mix", async () => {
+      // 8+ chars but no uppercase, digit, or special character.
+      const payload = buildRegisterPayload({ password: "alllowercase" });
 
       const res = await request(app)
         .post("/api/auth/register")

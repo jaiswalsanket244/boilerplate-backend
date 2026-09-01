@@ -209,10 +209,21 @@ describe("Password routes", () => {
         expect(res.body.success).toBe(false);
       });
 
-      it("returns 400 when password is shorter than 6 characters", async () => {
+      it("returns 400 when password is shorter than 8 characters", async () => {
         const res = await request(app)
           .post("/api/auth/update-password")
-          .send(buildUpdatePasswordPayload({ password: "abc" }))
+          .send(buildUpdatePasswordPayload({ password: "Ab@1" }))
+          .set("Accept", "application/json");
+
+        expect(res.status).toBe(400);
+        expect(res.body.success).toBe(false);
+      });
+
+      it("returns 400 when password lacks the required character mix", async () => {
+        // Long enough but all lowercase — no uppercase, digit, or special char.
+        const res = await request(app)
+          .post("/api/auth/update-password")
+          .send(buildUpdatePasswordPayload({ password: "alllowercase" }))
           .set("Accept", "application/json");
 
         expect(res.status).toBe(400);

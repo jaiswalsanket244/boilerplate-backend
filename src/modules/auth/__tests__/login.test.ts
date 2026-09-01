@@ -286,14 +286,31 @@ describe("POST /api/auth/login", () => {
       expect(res.body.success).toBe(false);
     });
 
-    it("returns 400 when password is shorter than 6 characters", async () => {
+    it("returns 400 when password is an empty string", async () => {
       const res = await request(app)
         .post("/api/auth/login")
-        .send(buildPasswordLoginPayload({ password: "abc" }))
+        .send(buildPasswordLoginPayload({ password: "" }))
         .set("Accept", "application/json");
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
+    });
+
+    it("does not enforce strength rules on login (backward compatible)", async () => {
+      // A pre-policy user with a weak password must still be able to log in;
+      // login only checks presence, so a short password reaches the provider.
+      const { user } = await createTestSession();
+      mockAuthKitProvider.authenticateWithPassword.mockResolvedValue({
+        user: { id: user.externalUserId, email: user.email },
+      });
+
+      const res = await request(app)
+        .post("/api/auth/login")
+        .send(buildPasswordLoginPayload({ email: user.email, password: "abc" }))
+        .set("Accept", "application/json");
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
     });
 
     it("returns 400 when otp is not 4 digits for otp loginType", async () => {
