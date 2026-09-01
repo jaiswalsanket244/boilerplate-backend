@@ -2,6 +2,7 @@ import { OTP_PURPOSE } from "@/db/models/otpVerification";
 import { SOCIAL_OAUTH_METHOD } from "@/enums/auth.enum";
 import { MFA_RESET_IDENTITY_METHOD } from "@/modules/auth/utils/auth.enum";
 import { validatePhoneNumber } from "@/helpers/common";
+import { passwordSchema } from "@/helpers/password";
 import { validationErrorHandler } from "@/helpers/validation-error";
 import z from "zod";
 import { validate } from "zod-express-validator";
@@ -14,7 +15,7 @@ const nameSchema = z.object({
 export const RegisterBodySchema = z.object({
   name: nameSchema,
   email: z.email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters long"),
+  password: passwordSchema,
   oauth: z.enum(SOCIAL_OAUTH_METHOD).optional(),
   referralCode: z.string().optional(),
   inviteToken: z.string().optional(),
@@ -22,10 +23,9 @@ export const RegisterBodySchema = z.object({
 
 export const LoginBodySchema = z.object({
   email: z.email("Invalid email address"),
-  password: z
-    .string()
-    .min(6, "Password must be at least 6 characters long")
-    .optional(),
+  // Login only checks presence, never strength: applying the new policy here
+  // would lock out existing users whose passwords predate it.
+  password: z.string().min(1, "Password is required").optional(),
   loginType: z.enum(["otp", "password"]),
   otp: z.string().length(4, "OTP must be 4 digits long").optional(),
 });
@@ -60,7 +60,7 @@ export const UpdatePasswordValidationSchema = {
   body: z.object({
     email: z.email("Invalid email address"),
     token: z.string().min(1, "Token is required"),
-    password: z.string().min(6, "Password must be at least 6 characters long"),
+    password: passwordSchema,
   }),
 } as const;
 
