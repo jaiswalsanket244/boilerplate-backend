@@ -4,6 +4,7 @@ import { User } from "@/db/models/user";
 import { COOKIE_NAME } from "@/enums";
 import { ErrorResponse, SuccessResponse } from "@/helpers/api-response";
 import { cookieHelper } from "@/helpers/cookie";
+import { getSessionMetadata } from "@/helpers/common";
 import { jwtHelper } from "@/helpers/jwt";
 import { authHelper } from "@/modules/auth/helpers/auth.helper";
 import { LOGIN_METHOD } from "@/modules/auth/utils/auth.enum";
@@ -36,7 +37,10 @@ export class AuthController {
       }
 
       const { user, token, refreshToken, pendingMfaToken } =
-        await authHelper.register(req.body);
+        await authHelper.register({
+          ...req.body,
+          metadata: getSessionMetadata(req),
+        });
 
       if (req.isMobile) {
         if (pendingMfaToken) {
@@ -90,6 +94,7 @@ export class AuthController {
           code,
           oauthProvider: oauthProvider!,
           inviteToken,
+          metadata: getSessionMetadata(req),
         },
       );
 
@@ -127,6 +132,7 @@ export class AuthController {
         loginType,
         otp,
         res,
+        metadata: getSessionMetadata(req),
       });
 
       if (result.error !== null) {

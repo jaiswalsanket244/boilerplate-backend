@@ -2,6 +2,7 @@ import { TErrorCode } from "@/constants/error-codes";
 import { IUser, IUserDocument } from "@/db/models/user";
 import { COOKIE_NAME } from "@/enums";
 import { MFA_RESET_IDENTITY_METHOD } from "@/modules/auth/utils/auth.enum";
+import { TSessionMetadata } from "@/modules/auth/helpers/token.helper";
 import {
   authValidators,
   RegisterBodySchema,
@@ -44,13 +45,18 @@ export type TLoginResponse =
       mfaChallengeId?: string;
     };
 
-export type TRegisterParams = z.infer<typeof RegisterBodySchema>;
+export type TRegisterParams = z.infer<typeof RegisterBodySchema> & {
+  metadata?: TSessionMetadata;
+};
 export type TLoginParams = z.infer<typeof LoginBodySchema> & {
   res: Response;
+  metadata?: TSessionMetadata;
 };
 export type TRegisterLoginOauthParams = z.infer<
   typeof RegisterLoginOauthBodySchema
->;
+> & {
+  metadata?: TSessionMetadata;
+};
 
 export type TOtpVerifyResult =
   | {
