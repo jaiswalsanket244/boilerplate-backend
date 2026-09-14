@@ -6,20 +6,28 @@ import status from "http-status";
 
 const SENSITIVE_FIELDS = ["password", "token", "authorization"];
 
-// Function to sanitize data
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object") return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+// Deep-copy `data`, replacing any sensitive field value with "[REDACTED]" at any
+// nesting depth, including inside arrays. Special objects (Date, ObjectId,
+// Buffer, …) aren't plain objects, so they're treated as leaves and passed
+// through untouched.
 function sanitizeData(data: any): any {
-  if (!data) return data;
-
-  const sanitized = { ...data };
-
-  // Hide common sensitive fields
-  SENSITIVE_FIELDS.forEach((field) => {
-    if (field in sanitized) {
-      sanitized[field] = "[REDACTED]";
+  if (Array.isArray(data)) return data.map(sanitizeData);
+  if (isPlainObject(data)) {
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(data)) {
+      sanitized[key] = SENSITIVE_FIELDS.includes(key)
+        ? "[REDACTED]"
+        : sanitizeData(value);
     }
-  });
-
-  return sanitized;
+    return sanitized;
+  }
+  return data;
 }
 
 // Async function to log error
