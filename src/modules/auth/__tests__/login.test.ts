@@ -286,6 +286,9 @@ describe("POST /api/auth/login", () => {
       expect(res.body.success).toBe(false);
     });
 
+    // Login validation moved from min(6) to presence-only (min(1)); the old
+    // length check would reject legacy passwords, so we now only assert that a
+    // blank password fails validation.
     it("returns 400 when password is an empty string (presence check)", async () => {
       const res = await request(app)
         .post("/api/auth/login")
