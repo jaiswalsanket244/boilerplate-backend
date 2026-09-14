@@ -286,14 +286,30 @@ describe("POST /api/auth/login", () => {
       expect(res.body.success).toBe(false);
     });
 
-    it("returns 400 when password is shorter than 6 characters", async () => {
+    // Login validation moved from min(6) to presence-only (min(1)); the old
+    // length check would reject legacy passwords, so we now only assert that a
+    // blank password fails validation.
+    it("returns 400 when password is an empty string (presence check)", async () => {
       const res = await request(app)
         .post("/api/auth/login")
-        .send(buildPasswordLoginPayload({ password: "abc" }))
+        .send(buildPasswordLoginPayload({ password: "" }))
         .set("Accept", "application/json");
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
+    });
+
+    it("does NOT enforce the strength policy on login (presence only, so legacy passwords still authenticate)", async () => {
+      const res = await request(app)
+        .post("/api/auth/login")
+        .send(buildPasswordLoginPayload({ password: "weak" }))
+        .set("Accept", "application/json");
+
+      // A short/weak password must pass validation and reach the business
+      // layer (401 invalid credentials) — enforcing strength here would lock
+      // out legacy users. The one thing it must NOT be is a 400 validation error.
+      expect(res.status).not.toBe(400);
+      expect(res.status).toBe(401);
     });
 
     it("returns 400 when otp is not 4 digits for otp loginType", async () => {
