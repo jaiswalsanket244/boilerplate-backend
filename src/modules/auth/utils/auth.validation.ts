@@ -242,6 +242,15 @@ const getEmailFromInviteTokenValidator = validate(
   validationErrorHandler,
 );
 
+const revokeSessionValidator = validate(
+  {
+    params: z.object({
+      sessionId: z.string().min(1, "Session id is required"),
+    }),
+  },
+  validationErrorHandler,
+);
+
 export const authValidators = {
   register: registerUserValidator,
   login: loginUserValidator,
@@ -260,4 +269,5 @@ export const authValidators = {
   verifyMagicLink: verifyMagicLinkValidator,
   getOauthUrl: getOauthUrlValidator,
   getEmailFromInviteToken: getEmailFromInviteTokenValidator,
+  revokeSession: revokeSessionValidator,
 };
