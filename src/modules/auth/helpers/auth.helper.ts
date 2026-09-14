@@ -19,9 +19,11 @@ import {
 import { RefreshToken } from "@/db/models/refreshToken";
 import { isUserInactiveOrDeleted } from "@/modules/auth/utils/auth.util";
 import {
-  generateAuthTokens,
+  buildRefreshTokenValue,
+  generateAccessToken,
   revokeRefreshToken,
 } from "@/modules/auth/helpers/token.helper";
+import crypto from "node:crypto";
 
 /**
  * Auth helper class — thin facade over the individual feature helpers.
@@ -60,15 +62,24 @@ class AuthHelper {
       return { error: "Account disabled or deleted.", status: 401 };
     }
 
-    // Delete the old refresh token (consume it)
-    await RefreshToken.deleteOne({ token });
+    // Legacy rows predate sessionId; assign one lazily so the session becomes
+    // durably identifiable from this refresh onward without breaking the flow.
+    const sessionId = record.sessionId ?? crypto.randomUUID();
 
-    // Generate a fresh pair of tokens
-    const {
-      token: newAccessToken,
-      refreshToken: newRefreshToken,
-      permissions,
-    } = await generateAuthTokens({ user });
+    // Rotate in place rather than delete+recreate: overwriting the token string
+    // consumes the old refresh token while preserving the row's _id, createdAt,
+    // userAgent and ip, so the sessionId stays stable across rotation.
+    const { token: newRefreshToken, expiresAt } = buildRefreshTokenValue();
+    record.token = newRefreshToken;
+    record.expiresAt = expiresAt;
+    record.sessionId = sessionId;
+    record.lastActiveAt = new Date();
+    await record.save();
+
+    const { token: newAccessToken, permissions } = await generateAccessToken(
+      { user },
+      sessionId,
+    );
     return {
       user: { ...user.toObject(), permissions },
       token: newAccessToken,

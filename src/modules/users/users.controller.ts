@@ -2,6 +2,7 @@ import { User } from "@/db/models/user";
 import { COOKIE_NAME, NOTIFICATION_TITLE, NOTIFICATION_TYPE } from "@/enums";
 import { ErrorResponse, SuccessResponse } from "@/helpers/api-response";
 import { cookieHelper } from "@/helpers/cookie";
+import { getSessionMetadata } from "@/helpers/common";
 import { getNotificationChannels } from "@/helpers/notification";
 import {
   buildPasswordTimestamps,
@@ -116,9 +117,11 @@ export class UserController {
         },
       );
 
-      const { token, refreshToken, permissions } = await generateAuthTokens({
-        user: updatedUser!,
-      });
+      const { token, refreshToken, permissions } = await generateAuthTokens(
+        { user: updatedUser! },
+        undefined,
+        getSessionMetadata(req),
+      );
 
       if (req.isMobile) {
         return SuccessResponse(res, status.OK, {
@@ -209,9 +212,11 @@ export class UserController {
         },
       );
 
-      const { token, refreshToken, permissions } = await generateAuthTokens({
-        user: updatedUser!,
-      });
+      const { token, refreshToken, permissions } = await generateAuthTokens(
+        { user: updatedUser! },
+        undefined,
+        getSessionMetadata(req),
+      );
 
       if (req.isMobile) {
         return SuccessResponse(res, status.OK, {

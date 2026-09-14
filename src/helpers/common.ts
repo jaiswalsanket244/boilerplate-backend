@@ -31,6 +31,18 @@ function isMobileRequest(req: Request): boolean {
   return req.headers[CLIENT_PLATFORM.HEADER] === CLIENT_PLATFORM.VALUES.MOBILE;
 }
 
+// Capture device metadata for the session record. Defaults to "unknown" so
+// downstream persistence never receives undefined for a required-ish field.
+function getSessionMetadata(req: Pick<Request, "headers" | "ip">): {
+  userAgent: string;
+  ip: string;
+} {
+  return {
+    userAgent: req.headers["user-agent"] ?? "unknown",
+    ip: req.ip ?? "unknown",
+  };
+}
+
 // Path without the query string — the query can carry tokens/PII that must
 // never be persisted (e.g. into audit-log context.path).
 function stripQueryString(url?: string): string | undefined {
@@ -62,6 +74,7 @@ function validatePhoneNumber(phoneNumber: string): boolean {
 
 export {
   generateReferralCode,
+  getSessionMetadata,
   isDevEnvironment,
   isMobileRequest,
   isProduction,
