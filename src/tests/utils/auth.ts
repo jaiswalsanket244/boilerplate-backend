@@ -5,6 +5,7 @@ import { PERMISSIONS, STATUS, USER_TYPE } from "@/enums";
 import { jwtHelper } from "@/helpers/jwt";
 import { faker } from "@faker-js/faker";
 import mongoose from "mongoose";
+import crypto from "node:crypto";
 
 const ALL_PERMISSIONS = Object.values(PERMISSIONS);
 
@@ -24,6 +25,8 @@ export interface ITestSession {
   user: IUserDocument;
   company: ICompanyDocument;
   token: string;
+  /** Durable session identity baked into the token's `sessionId` claim. */
+  sessionId: string;
   /** Formatted as "token=<jwt>" — pass to .set("Cookie", session.cookie) */
   cookie: string;
   /** Formatted as "Bearer <jwt>" — pass to .set("Authorization", ...) */
@@ -61,18 +64,22 @@ export async function createTestSession(
   await Company.findByIdAndUpdate(company._id, { userRef: user._id });
 
   // 4. Generate JWT (same payload the real app issues via generateAuthTokens):
-  // orgId and permissions are required by jwtDecoder + authorize to accept it.
+  // orgId and permissions are required by jwtDecoder + authorize to accept it;
+  // sessionId mirrors the durable session-identity claim real logins carry.
+  const sessionId = crypto.randomUUID();
   const token = jwtHelper.generateToken({
     _id: user._id.toString(),
     email: user.email,
     orgId: company._id.toString(),
     permissions: permissions ?? ROLE_PERMISSIONS[role] ?? [],
+    sessionId,
   });
 
   return {
     user,
     company: company as ICompanyDocument,
     token,
+    sessionId,
     cookie: `token=${token}`,
     bearerHeader: `Bearer ${token}`,
   };

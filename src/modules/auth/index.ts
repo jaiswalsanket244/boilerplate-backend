@@ -1,5 +1,6 @@
 import { Middleware } from "@/middleware/auth";
 import { AuthController } from "@/modules/auth/auth.controller";
+import { SessionsController } from "@/modules/auth/sessions.controller";
 import { authValidators } from "@/modules/auth/utils/auth.validation";
 import { Router } from "express";
 
@@ -92,6 +93,34 @@ export class AuthRouter {
 
     // MFA Routes
     this.router.use("/mfa", new MfaRouter().router);
+
+    // Authenticated session-management routes
+    this.router.use("/sessions", new SessionsRouter().router);
+  }
+}
+
+class SessionsRouter {
+  router: Router;
+
+  constructor() {
+    this.router = Router();
+
+    this.initializeRoutes();
+  }
+
+  private initializeRoutes() {
+    const controller = new SessionsController();
+    const middleware = new Middleware();
+
+    this.router.use(middleware.authMiddleware);
+
+    this.router.get("/", controller.list);
+    this.router.post("/revoke-others", controller.revokeOthers);
+    this.router.delete(
+      "/:sessionId",
+      authValidators.revokeSession,
+      controller.revokeOne,
+    );
   }
 }
 
