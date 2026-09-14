@@ -16,6 +16,7 @@ import { authService } from "@/providers/auth";
 import { emailService } from "@/providers/email";
 import status from "http-status";
 import { generateAuthTokens } from "@/modules/auth/helpers/token.helper";
+import { revokeOtherSessions } from "@/modules/auth/helpers/session.helper";
 
 /**
  * UserController class for handling user-related HTTP requests
@@ -212,11 +213,17 @@ export class UserController {
         },
       );
 
-      const { token, refreshToken, permissions } = await generateAuthTokens(
-        { user: updatedUser! },
-        undefined,
-        getSessionMetadata(req),
-      );
+      const { token, refreshToken, permissions, sessionId } =
+        await generateAuthTokens(
+          { user: updatedUser! },
+          undefined,
+          getSessionMetadata(req),
+        );
+
+      // Sign out every other device on password change. generateAuthTokens
+      // minted a fresh sessionId for this device, so revoking all sessions
+      // except it keeps only the re-authenticated current device signed in.
+      await revokeOtherSessions(userId, sessionId);
 
       if (req.isMobile) {
         return SuccessResponse(res, status.OK, {

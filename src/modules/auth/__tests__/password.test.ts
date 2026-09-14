@@ -1,14 +1,32 @@
 import { ERROR_CODES } from "@/constants/error-codes";
 import { USER_TYPE } from "@/enums";
 import { createApp } from "@/app";
+import { RefreshToken } from "@/db/models/refreshToken";
+import { authHelper } from "@/modules/auth/helpers/auth.helper";
 import { AuthProviderError } from "@/providers/auth/utils/auth-provider.error";
 import { mockAuthKitProvider } from "@/tests/mocks/authkit-provider.mock";
 import { mockEmailService } from "@/tests/mocks/email-service.mock";
 import { mockJwtHelper } from "@/tests/mocks/jwt.mock";
 import { createTestSession } from "@/tests/utils/auth";
 import { faker } from "@faker-js/faker";
+import mongoose from "mongoose";
+import crypto from "node:crypto";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+async function seedSession(userId: mongoose.Types.ObjectId | string) {
+  const token = crypto.randomBytes(20).toString("hex");
+  await RefreshToken.create({
+    userId,
+    token,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    sessionId: crypto.randomUUID(),
+    userAgent: "unknown",
+    ip: "unknown",
+    lastActiveAt: new Date(),
+  });
+  return token;
+}
 
 /**
  * POST /api/auth/reset-password
@@ -182,6 +200,37 @@ describe("Password routes", () => {
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
         expect(mockAuthKitProvider.updateUser).toBeCalled();
+      });
+
+      it("revokes every session for the user and leaves other users untouched", async () => {
+        const { user } = await createTestSession();
+        mockJwtHelper.verifyToken.mockReturnValue({ email: user.email });
+
+        const userTokens = [
+          await seedSession(user._id),
+          await seedSession(user._id),
+        ];
+
+        const other = await createTestSession();
+        const otherToken = await seedSession(other.user._id);
+
+        const res = await request(app)
+          .post("/api/auth/update-password")
+          .send(buildUpdatePasswordPayload({ email: user.email }))
+          .set("Accept", "application/json");
+
+        expect(res.status).toBe(200);
+
+        expect(await RefreshToken.find({ userId: user._id })).toHaveLength(0);
+        for (const token of userTokens) {
+          const attempt = await authHelper.refreshSession(token);
+          expect(attempt.error).not.toBeNull();
+        }
+
+        expect(
+          await RefreshToken.find({ userId: other.user._id }),
+        ).toHaveLength(1);
+        expect((await authHelper.refreshSession(otherToken)).error).toBeNull();
       });
     });
     describe("validation errors", () => {
