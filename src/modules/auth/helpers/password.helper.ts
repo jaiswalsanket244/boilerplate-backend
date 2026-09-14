@@ -7,6 +7,7 @@ import {
   getPasswordRotationConfig,
 } from "@/modules/auth/utils/auth.util";
 import type { TUpdatePasswordResult } from "@/modules/auth/utils/auth.types";
+import { revokeAllSessions } from "@/modules/auth/helpers/session.helper";
 import { authService } from "@/providers/auth";
 import { AuthProviderError } from "@/providers/auth/utils/auth-provider.error";
 import { emailService } from "@/providers/email";
@@ -96,6 +97,10 @@ export const updatePassword = async (
     },
     { new: true },
   );
+
+  // A reset implies possible compromise and has no trusted current device, so
+  // sign out every session for this user.
+  await revokeAllSessions(existingUser._id);
 
   return { success: true, user: updatedUser };
 };

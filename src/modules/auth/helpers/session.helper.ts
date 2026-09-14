@@ -56,3 +56,16 @@ export async function revokeOtherSessions(
 
   return result.deletedCount ?? 0;
 }
+
+/**
+ * Delete every one of a user's sessions and return how many were removed. Used
+ * by the password-reset flow, where there is no trusted current device to keep,
+ * so the whole account is signed out.
+ */
+export async function revokeAllSessions(
+  userId: mongoose.Types.ObjectId | string,
+): Promise<number> {
+  const result = await RefreshToken.deleteMany({ userId });
+
+  return result.deletedCount ?? 0;
+}
