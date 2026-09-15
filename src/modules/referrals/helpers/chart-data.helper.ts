@@ -1,5 +1,10 @@
 import dayjs from "dayjs";
+import isoWeek from "dayjs/plugin/isoWeek.js";
 import { DURATION } from "@/modules/referrals/utils/referrals.enum";
+
+// Self-extend so this module works when imported alone; isoWeek()/isoWeekYear()
+// must match the $isoWeek/$isoWeekYear grouping used in getTimeGrouping.
+dayjs.extend(isoWeek);
 
 export function fillTimeSeries(
   start: dayjs.Dayjs,
@@ -42,16 +47,13 @@ export function fillTimeSeries(
 
   if (timeframe === DURATION.WEEKLY) {
     const weeks: dayjs.Dayjs[] = [];
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 12; i++) {
       weeks.push(start.add(i, "week"));
     }
-    return weeks.map((d, idx) => {
-      const weekNum = d.isoWeek(); // ISO week number
-      return {
-        label: `Week ${idx + 1}`,
-        value: lookup.get(`${d.year()}-${weekNum}`) ?? 0,
-      };
-    });
+    return weeks.map((d, idx) => ({
+      label: `Week ${idx + 1}`,
+      value: lookup.get(`${d.isoWeekYear()}-${d.isoWeek()}`) ?? 0,
+    }));
   }
 }
 
@@ -89,8 +91,8 @@ export function getTimeGrouping(timeframe: DURATION) {
   switch (timeframe) {
     case DURATION.WEEKLY:
       return {
-        week: { $week: "$createdAt" },
-        year: { $year: "$createdAt" },
+        week: { $isoWeek: "$createdAt" },
+        year: { $isoWeekYear: "$createdAt" },
       };
 
     case DURATION.YEARLY:
