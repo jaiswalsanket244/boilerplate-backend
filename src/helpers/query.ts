@@ -149,10 +149,14 @@ export function parseQueryString(query: Record<string, string>): {
     const sortItems = sortParam.split(VALUE_SEPARATOR_DELIMETER);
     sortItems.forEach((item) => {
       const [id, direction] = item.split(RANGE_VALUE_DELIMETER);
-      if (id && (direction === "asc" || direction === "desc")) {
+      const normalizedDirection = direction?.trim().toLowerCase();
+      if (
+        id &&
+        (normalizedDirection === "asc" || normalizedDirection === "desc")
+      ) {
         sorting.push({
           id,
-          desc: direction === "desc",
+          desc: normalizedDirection === "desc",
         });
       }
     });
