@@ -6,8 +6,11 @@ import {
   USER_ANALYTICS_TYPE,
 } from "@/modules/users/utils/users.enum";
 import dayjs from "dayjs";
+import isoWeek from "dayjs/plugin/isoWeek.js";
 import { PipelineStage } from "mongoose";
 import { IUserGrowthResult } from "@/modules/users/utils/users.types";
+
+dayjs.extend(isoWeek);
 
 export async function evaluateUserGrowthStats(
   filter: object = {},
@@ -63,7 +66,9 @@ export async function evaluateUserAnalytics(
       $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
     },
     [USER_ANALYTICS_DURATION.WEEKLY]: {
-      $dateToString: { format: "%Y-%U", date: "$createdAt" },
+      // ISO week-numbering year (%G) and ISO week 01–53 (%V) so grouping matches
+      // the ISO week list built below with dayjs().isoWeek().
+      $dateToString: { format: "%G-%V", date: "$createdAt" },
     },
     [USER_ANALYTICS_DURATION.MONTHLY]: {
       $dateToString: { format: "%Y-%m", date: "$createdAt" },
@@ -105,7 +110,8 @@ export async function evaluateUserAnalytics(
 
   const formatKey = (dateStr: string) => {
     if (duration === USER_ANALYTICS_DURATION.WEEKLY)
-      return `W${dateStr.split("-")[1]}`;
+      // %V is zero-padded ("06"); strip padding so keys match the "W1"…"W53" list.
+      return `W${Number(dateStr.split("-")[1])}`;
 
     if (duration === USER_ANALYTICS_DURATION.MONTHLY) {
       const [year, month] = dateStr.split("-").map(Number);
