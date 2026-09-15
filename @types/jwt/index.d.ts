@@ -7,5 +7,6 @@ declare module "jsonwebtoken" {
     email: string;
     role?: string;
     loginMethod?: LOGIN_METHOD;
+    sessionId?: string;
   }
 }

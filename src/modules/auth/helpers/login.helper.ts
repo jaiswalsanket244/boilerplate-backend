@@ -21,7 +21,7 @@ import { generateAuthTokens } from "@/modules/auth/helpers/token.helper";
  * Handles the login logic for different types (password, otp)
  */
 export async function login(data: TLoginParams): Promise<TLoginResponse> {
-  const { email, password, loginType, otp } = data;
+  const { email, password, loginType, otp, metadata } = data;
 
   // 1. Find user
   const userData = await User.findOne({ email }).lean();
@@ -202,10 +202,14 @@ export async function login(data: TLoginParams): Promise<TLoginResponse> {
   }
 
   // 7. Generate session token
-  const { token, refreshToken, permissions } = await generateAuthTokens({
-    user: authenticatedUser,
-    company: company!,
-  });
+  const { token, refreshToken, permissions } = await generateAuthTokens(
+    {
+      user: authenticatedUser,
+      company: company!,
+    },
+    undefined,
+    metadata,
+  );
 
   authenticatedUser = {
     ...authenticatedUser,

@@ -98,7 +98,7 @@ async function syncWithAuthProvider({
  * @returns Object containing the created user and their session token
  */
 export async function register(data: TRegisterParams) {
-  const { email, password, name, referralCode, inviteToken } = data;
+  const { email, password, name, referralCode, inviteToken, metadata } = data;
 
   // 1. Validate invitation if an invite token is provided
   let invitation: IInvitedUsers | null = null;
@@ -191,9 +191,11 @@ export async function register(data: TRegisterParams) {
   }
 
   //9. Generate JWT session token
-  const { token, refreshToken, permissions } = await generateAuthTokens({
-    user,
-  });
+  const { token, refreshToken, permissions } = await generateAuthTokens(
+    { user },
+    undefined,
+    metadata,
+  );
 
   return { user: { ...user.toObject(), permissions }, token, refreshToken };
 }
@@ -204,7 +206,7 @@ export async function register(data: TRegisterParams) {
  * @returns Object containing the user and their session token
  */
 export async function registerLoginOauth(data: TRegisterLoginOauthParams) {
-  const { code, oauthProvider, inviteToken } = data;
+  const { code, oauthProvider, inviteToken, metadata } = data;
 
   // 1. Authenticate with Auth Provider using the OAuth code
   const result = await authService.authenticateWithCode(code);
@@ -302,9 +304,11 @@ export async function registerLoginOauth(data: TRegisterLoginOauthParams) {
   }
 
   // 4. Generate JWT session token
-  const { token, refreshToken, permissions } = await generateAuthTokens({
-    user,
-  });
+  const { token, refreshToken, permissions } = await generateAuthTokens(
+    { user },
+    undefined,
+    metadata,
+  );
 
   return { user: { ...user.toObject(), permissions }, token, refreshToken };
 }

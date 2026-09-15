@@ -13,4 +13,5 @@ export interface IUserGrowthResult {
 export interface IUserWithCompany extends IUser {
   company?: ICompany;
   permissions?: string[];
+  sessionId?: string;
 }

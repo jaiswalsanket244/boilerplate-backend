@@ -89,6 +89,9 @@ export class Middleware {
         company: user.companyRef,
         companyRef: user.companyRef?._id,
         permissions: decoded.permissions,
+        // Surface the durable session identity so authenticated routes can flag
+        // the current session and protect it. Stable across refresh rotation.
+        sessionId: decoded.sessionId,
       };
 
       if (
