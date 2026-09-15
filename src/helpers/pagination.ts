@@ -26,8 +26,21 @@ export const extractLimitAndOffset = (
   page?: number | string,
   pageSize?: number | string,
 ) => {
-  page = Number(page) || PAGINATION.DEFAULT_PAGE;
-  pageSize = Number(pageSize) || PAGINATION.DEFAULT_PAGE_SIZE;
+  // Raw query values are untrusted: coerce, then reject anything that isn't a
+  // finite positive integer so callers never receive zero, negative, fractional
+  // or unbounded pagination. Fractional inputs fall back to the default rather
+  // than being floored, keeping the "must be a valid whole page" contract simple.
+  const parsedPage = Number(page);
+  page =
+    Number.isInteger(parsedPage) && parsedPage > 0
+      ? parsedPage
+      : PAGINATION.DEFAULT_PAGE;
+
+  const parsedPageSize = Number(pageSize);
+  pageSize =
+    Number.isInteger(parsedPageSize) && parsedPageSize > 0
+      ? Math.min(parsedPageSize, PAGINATION.MAX_PAGE_SIZE)
+      : PAGINATION.DEFAULT_PAGE_SIZE;
 
   const skips = (page - 1) * pageSize;
   return { page, pageSize, skips };
