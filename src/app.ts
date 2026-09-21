@@ -6,6 +6,7 @@ import { createExpressMiddleware } from "agendash";
 import type { Agenda } from "agenda";
 import { Middleware } from "@/middleware/auth";
 import { api } from "@/modules/api";
+import { HealthRouter } from "@/modules/health";
 import { ErrorResponse } from "@/helpers/api-response";
 import { globalErrorHandler } from "@/middleware/error-handler";
 import { WebhookRouter } from "@/webhooks";
@@ -58,6 +59,8 @@ export const createApp = (agenda?: Agenda): Application => {
     });
 
     app.use(compression()); // for gzipping the request
+
+    app.use("/health", new HealthRouter().router); // service health check
 
     app.use("/api", api); // route prefix
 
