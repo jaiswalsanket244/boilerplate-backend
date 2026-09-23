@@ -1,5 +1,10 @@
 import { FILTER_TYPE, FilterValue, SortValue } from "@/types/query.types";
 
+// Escape regex metacharacters so user search text is matched literally in $regex.
+export function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export function createFacetPipeline(
   page: number,
   skips: number,
@@ -29,11 +34,11 @@ export const buildNameSearchMatchStage = (searchValue?: string) => {
   if (!searchValue?.trim()) return null;
 
   const terms = searchValue.trim().split(/\s+/);
-  const escapedSearchValue = searchValue.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // Escape regex
+  const escapedSearchValue = escapeRegex(searchValue);
 
   if (terms.length === 1) {
     const term = terms[0];
-    const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const escapedTerm = escapeRegex(term);
     return {
       $match: {
         $or: [
@@ -58,7 +63,7 @@ export const buildNameSearchMatchStage = (searchValue?: string) => {
         },
         {
           $and: terms.map((term) => {
-            const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const escapedTerm = escapeRegex(term);
             return {
               $or: [
                 { "name.first": { $regex: escapedTerm, $options: "i" } },
@@ -173,8 +178,9 @@ export function getMongoFilter({
   const mongoFilter: Record<string, unknown> = {};
 
   if (searchValue && searchColumns?.length) {
+    const escapedSearchValue = escapeRegex(searchValue);
     mongoFilter.$or = searchColumns.map((column) => ({
-      [column]: { $regex: searchValue, $options: "i" },
+      [column]: { $regex: escapedSearchValue, $options: "i" },
     }));
   }
 
@@ -234,9 +240,10 @@ export function buildSearchFilter(
   searchColumns: string[],
 ) {
   if (searchValue && searchColumns?.length) {
+    const escapedSearchValue = escapeRegex(searchValue);
     return {
       $or: searchColumns.map((column) => ({
-        [column]: { $regex: searchValue, $options: "i" },
+        [column]: { $regex: escapedSearchValue, $options: "i" },
       })),
     };
   }
