@@ -19,9 +19,6 @@ export const CreateProductBodySchema = z.object({
   title: z.string().min(3).max(100),
   description: z.string().max(500),
   price: z.coerce.number().min(0),
-  costPrice: z.coerce.number().min(0).optional(),
-  retailPrice: z.coerce.number().min(0).optional(),
-  salePrice: z.coerce.number().min(0).optional(),
   companyRef: z.string().optional(),
 });
 

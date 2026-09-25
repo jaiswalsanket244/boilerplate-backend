@@ -10,9 +10,6 @@ export interface IProducts {
   productImages?: string[];
   description: string;
   price?: number;
-  costPrice?: number;
-  retailPrice?: number;
-  salePrice?: number;
   userRef?: mongoose.Types.ObjectId;
   companyRef: mongoose.Types.ObjectId;
   status: STATUS;
@@ -38,18 +35,6 @@ const ProductSchema = new mongoose.Schema<IProductsDocument>(
       required: true,
     },
     price: {
-      type: Number,
-      required: false,
-    },
-    costPrice: {
-      type: Number,
-      required: false,
-    },
-    retailPrice: {
-      type: Number,
-      required: false,
-    },
-    salePrice: {
       type: Number,
       required: false,
     },

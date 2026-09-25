@@ -16,9 +16,6 @@ export interface IProduct {
   productImages?: string[];
   description?: string;
   price?: number;
-  costPrice?: number;
-  retailPrice?: number;
-  salePrice?: number;
   companyRef?: TObjectId | string;
   userRef?: TObjectId | string;
   sellerStripeAccountId?: string;
