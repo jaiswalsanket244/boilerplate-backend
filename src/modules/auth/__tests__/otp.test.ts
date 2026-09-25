@@ -4,6 +4,8 @@ import { faker } from "@faker-js/faker";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { OTP_EXPIRY_MINUTES } from "@/modules/auth/utils/auth.constant";
+
 import { createTestSession } from "@/tests/utils/auth";
 
 /**
@@ -49,6 +51,28 @@ function buildVerifyOtpPayload(overrides: Record<string, unknown> = {}) {
 // ---------------------------------------------------------------------------
 // Suite
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+describe("OTP_EXPIRY_MINUTES constants", () => {
+  it("sets LOGIN expiry to 3 minutes", () => {
+    expect(OTP_EXPIRY_MINUTES.LOGIN).toBe(3);
+  });
+
+  it("leaves SIGNUP expiry unchanged at 10 minutes", () => {
+    expect(OTP_EXPIRY_MINUTES.SIGNUP).toBe(10);
+  });
+
+  it("leaves PHONE expiry unchanged at 5 minutes", () => {
+    expect(OTP_EXPIRY_MINUTES.PHONE).toBe(5);
+  });
+
+  it("leaves MFA_RESET expiry unchanged at 5 minutes", () => {
+    expect(OTP_EXPIRY_MINUTES.MFA_RESET).toBe(5);
+  });
+});
 
 describe("OTP routes", () => {
   const app = createApp();

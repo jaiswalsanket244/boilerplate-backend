@@ -4,7 +4,7 @@ import { USER_TYPE } from "@/enums";
  * OTP expiry durations in minutes
  */
 export const OTP_EXPIRY_MINUTES = {
-  LOGIN: 5,
+  LOGIN: 3,
   SIGNUP: 10,
   PHONE: 5,
   MFA_RESET: 5,
