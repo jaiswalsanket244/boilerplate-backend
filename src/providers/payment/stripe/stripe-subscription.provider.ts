@@ -14,6 +14,19 @@ export class StripeSubscriptionProvider {
     });
   };
 
+  public cancelSubscriptionImmediately = async (subscriptionId: string) => {
+    return this.stripe.subscriptions.cancel(subscriptionId);
+  };
+
+  public payInvoice = async (invoiceId: string) => {
+    return this.stripe.invoices.pay(invoiceId);
+  };
+
+  // Stops Stripe's automatic collection (and its retry schedule) for one invoice.
+  public disableInvoiceAutoAdvance = async (invoiceId: string) => {
+    return this.stripe.invoices.update(invoiceId, { auto_advance: false });
+  };
+
   public createNewSubscription = async (
     customerId: string,
     priceId: string,

@@ -1,4 +1,5 @@
 import envConfig from "@/config/env";
+import { startInvoiceRetries } from "@/agenda/helpers/payment-retry.helper";
 import { Company } from "@/db/models/company";
 import { Subscription } from "@/db/models/subscription";
 import { User } from "@/db/models/user";
@@ -172,6 +173,10 @@ export class SubscriptionWebhook {
                   { stripeSubscriptionId: invoice.subscription },
                   { $set: { status: STRIPE_SUBSCRIPTION_STATUS.PAST_DUE } },
                 );
+                // Only the original charge starts the cycle; our own retries re-fire this event.
+                if (invoice.attempt_count === 1) {
+                  await startInvoiceRetries(invoice.id);
+                }
                 if (paymentIntentId) {
                   await paymentGateway.retrievePaymentIntent(
                     String(paymentIntentId),

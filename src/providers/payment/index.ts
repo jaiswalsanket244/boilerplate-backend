@@ -164,6 +164,29 @@ export class PaymentGatewayService {
   };
 
   /**
+   * Cancels a subscription immediately (fires customer.subscription.deleted).
+   */
+  public cancelSubscriptionImmediately = async (subscriptionId: string) => {
+    return this.stripeSubscription.cancelSubscriptionImmediately(
+      subscriptionId,
+    );
+  };
+
+  /**
+   * Attempts to pay an open invoice with the customer's default payment method.
+   */
+  public payInvoice = async (invoiceId: string) => {
+    return this.stripeSubscription.payInvoice(invoiceId);
+  };
+
+  /**
+   * Turns off Stripe's automatic collection and retries for a single invoice.
+   */
+  public disableInvoiceAutoAdvance = async (invoiceId: string) => {
+    return this.stripeSubscription.disableInvoiceAutoAdvance(invoiceId);
+  };
+
+  /**
    * Fetches and deletes incomplete subscriptions for a customer.
    */
   public cleanupIncompleteSubscriptions = async (customerId: string) => {
