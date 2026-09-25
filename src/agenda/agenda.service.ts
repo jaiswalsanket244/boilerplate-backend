@@ -99,6 +99,24 @@ class AgendaService {
     return this.engine.create(name, data).unique(uniqueKey).save();
   }
 
+  /*
+  Schedule for a future time, inserting only if no job matches uniqueKey.
+  Unlike enqueueUnique, an existing (even completed) job is never overwritten
+  or re-armed.
+  */
+  public async scheduleUnique<T extends object>(
+    when: string | Date,
+    name: string,
+    data: T,
+    uniqueKey: Record<string, unknown>,
+  ) {
+    return this.engine
+      .create(name, data)
+      .schedule(when)
+      .unique(uniqueKey, { insertOnly: true })
+      .save();
+  }
+
   // Register a recurring (cron/interval) job. Idempotent per job name.
   public async every(interval: string, name: string, data: object = {}) {
     return this.engine.every(interval, name, data);

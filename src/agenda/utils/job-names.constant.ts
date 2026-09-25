@@ -5,6 +5,7 @@ Convention: "<domain>:<action>".
 export const JOBS = {
   STRIPE: {
     PROCESS_TRANSFERS: "stripe:process-transfers",
+    RETRY_FAILED_INVOICE: "stripe:retry-failed-invoice",
   },
   LOGS: {
     CLEANUP_PREV_MONTH: "logs:cleanup-prev-month",
