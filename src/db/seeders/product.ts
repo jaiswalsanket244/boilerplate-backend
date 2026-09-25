@@ -20,9 +20,6 @@ export async function seedProducts(props: seedProductsType) {
         productImages: [faker.image.url(), faker.image.url()],
         description: faker.commerce.productDescription(),
         price: faker.commerce.price(),
-        costPrice: faker.commerce.price(),
-        retailPrice: faker.commerce.price(),
-        salePrice: faker.commerce.price(),
         userRef: props.userRef ?? new Types.ObjectId(),
         companyRef: props.companyRef ?? new Types.ObjectId(),
       });
