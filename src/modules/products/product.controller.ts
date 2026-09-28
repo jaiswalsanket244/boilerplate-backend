@@ -48,7 +48,7 @@ export class ProductController {
     try {
       const id = req.params.id;
 
-      const data = await productHelper.findOne({
+      const data = await productHelper.findOneWithRating({
         _id: ObjectId(id),
         companyRef: req.user!.companyRef,
       });

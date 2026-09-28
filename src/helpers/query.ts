@@ -1,14 +1,16 @@
 import { FILTER_TYPE, FilterValue, SortValue } from "@/types/query.types";
+import { PipelineStage } from "mongoose";
 
 export function createFacetPipeline(
   page: number,
   skips: number,
   pageSize: number,
+  itemStages: PipelineStage.FacetPipelineStage[] = [],
 ) {
   return [
     {
       $facet: {
-        items: [{ $skip: skips }, { $limit: pageSize }],
+        items: [{ $skip: skips }, { $limit: pageSize }, ...itemStages],
         totalCount: [{ $count: "count" }],
       },
     },
