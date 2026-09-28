@@ -57,12 +57,12 @@ export class AuthService {
   }
 
   /**
-   * LOCAL E2E CLEANUP OPERATIONS
+   * PROVIDER RECORD DELETION
    *
-   * Used only by:
-   * modules/e2e-support/helpers/delete-test-user.helper.ts
-   *
-   * These do not belong to the application's normal soft-delete flow.
+   * Used by:
+   * modules/e2e-support/helpers/delete-test-user.helper.ts (local E2E cleanup)
+   * modules/users/helpers/delete-account.helper.ts (self account deletion, so
+   * the email can register again; deleteUser and deleteOrganizationMembership only)
    */
   async deleteUser(userId: string) {
     if (!this.authProvider.deleteUser) {

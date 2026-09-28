@@ -11,4 +11,8 @@ export const USER_RESPONSE_MESSAGES = {
   DATA_FETCHED: "Dashboard data fetched successfully.",
   COMPANY_REF_REQUIRED: "Company ref is required.",
   DATA_UPDATED_SUCCESS: "Data updated successfully.",
+  ACCOUNT_DELETED: "Your account has been deleted.",
+  SOLE_ADMIN_CANNOT_DELETE:
+    "You are the only admin of your company. Make another member an admin before deleting your account.",
+  SUPER_ADMIN_CANNOT_DELETE: "Super admin accounts cannot be self-deleted.",
 } as const;

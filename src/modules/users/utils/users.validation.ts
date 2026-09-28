@@ -142,6 +142,8 @@ const changePasswordValidator = validate(
 
 const meValidator = validate(MeValidationSchema, validationErrorHandler);
 
+const deleteMeValidator = validate(MeValidationSchema, validationErrorHandler);
+
 const getUsersValidator = validate(
   GetUsersValidationSchema,
   validationErrorHandler,
@@ -193,6 +195,7 @@ export const userValidators = {
   updateProfile: updateProfileValidator,
   changePassword: changePasswordValidator,
   me: meValidator,
+  deleteMe: deleteMeValidator,
   getUsers: getUsersValidator,
   getOne: getOneValidator,
   updateStatus: updateStatusValidator,

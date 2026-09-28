@@ -9,3 +9,9 @@ export enum USER_ANALYTICS_TYPE {
   NEW = "new",
   ACTIVE = "active",
 }
+
+export enum DELETE_ACCOUNT_RESULT {
+  DELETED = "deleted",
+  SOLE_ADMIN = "sole_admin",
+  SUPER_ADMIN_NOT_ALLOWED = "super_admin_not_allowed",
+}

@@ -93,6 +93,7 @@ export class Middleware {
 
       if (
         user.status === STATUS.INACTIVE ||
+        user.status === STATUS.DELETED ||
         reqUser?.company?.companyStatus === STATUS.INACTIVE
       ) {
         // For web: clear cookie
