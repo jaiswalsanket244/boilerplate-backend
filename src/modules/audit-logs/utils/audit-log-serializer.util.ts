@@ -1,5 +1,6 @@
 import type { IAuditLog } from "@/db/models/audit-logs/audit-log";
 import { scrubSensitiveKeys } from "@/db/plugins/audit/utils/sensitive-keys";
+import { toCsv } from "@/helpers/csv";
 import type {
   AuditExportFormat,
   ISerializedAuditLogs,
@@ -27,45 +28,6 @@ const CSV_COLUMNS = [
   "metadata",
   "_sig",
 ] as const;
-
-/*
- * Mongoose `.lean()` leaves ObjectId instances on the row; render them as bare
- * hex, not the opaque object JSON.stringify would emit.
- */
-function isObjectIdLike(value: object): boolean {
-  return typeof (value as { toHexString?: unknown }).toHexString === "function";
-}
-
-function csvCell(value: unknown): string {
-  if (value === null || value === undefined) return "";
-
-  let raw: string;
-  if (value instanceof Date) {
-    raw = value.toISOString();
-  } else if (typeof value === "object") {
-    raw = isObjectIdLike(value) ? String(value) : JSON.stringify(value);
-  } else {
-    raw = String(value);
-  }
-
-  /*
-   * Neutralize spreadsheet formula injection: Excel/Sheets execute a cell that
-   * begins with one of these. Audit fields (actorEmail, actor.name, action,
-   * metadata) are user-influenced, so prefix a literal quote to defuse it.
-   */
-  if (/^[=+\-@\t\r]/.test(raw)) {
-    raw = `'${raw}`;
-  }
-
-  /*
-   * RFC-4180: quote when the cell contains a comma, quote, CR or LF; double
-   * any embedded quote.
-   */
-  if (/[",\r\n]/.test(raw)) {
-    return `"${raw.replace(/"/g, '""')}"`;
-  }
-  return raw;
-}
 
 function rowToCsvValues(row: IAuditLog): unknown[] {
   return [
@@ -95,12 +57,9 @@ export function serializeAuditLogs(
   const safeRows = rows.map((row) => scrubSensitiveKeys(row) as IAuditLog);
 
   if (format === "csv") {
-    const lines = [CSV_COLUMNS.join(",")];
-    for (const row of safeRows) {
-      lines.push(rowToCsvValues(row).map(csvCell).join(","));
-    }
+    const csv = toCsv(CSV_COLUMNS, safeRows.map(rowToCsvValues));
     return {
-      body: Buffer.from(lines.join("\r\n"), "utf-8"),
+      body: Buffer.from(csv, "utf-8"),
       mimeType: "text/csv",
       ext: "csv",
     };

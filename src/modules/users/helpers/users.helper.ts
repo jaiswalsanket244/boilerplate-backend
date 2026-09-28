@@ -17,6 +17,7 @@ import { extractLimitAndOffset } from "@/helpers/pagination";
 import isoWeek from "dayjs/plugin/isoWeek.js";
 import { FilterQuery } from "mongoose";
 import { workos } from "@/providers/auth/authkit.provider";
+import { USER_EXPORT_FIELDS } from "@/modules/users/utils/users.constant";
 
 dayjs.extend(isoWeek);
 
@@ -45,6 +46,13 @@ class UserHelper {
       },
       ...facetPipeline,
     ]);
+  };
+
+  public findAllForExport = async (companyRef: string) => {
+    return User.find({ companyRef: ObjectId(companyRef) })
+      .select(USER_EXPORT_FIELDS)
+      .sort({ createdAt: 1 })
+      .lean();
   };
 
   public findOne = async (id: string) => {

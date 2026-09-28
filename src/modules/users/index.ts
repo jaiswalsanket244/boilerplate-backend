@@ -68,6 +68,12 @@ export class AdminUsersRouter {
       controller.getUserAnalytics,
     );
     this.router.get(
+      "/export",
+      authorize(PERMISSIONS.USERS_VIEW),
+      userValidators.empty,
+      controller.exportCsv,
+    );
+    this.router.get(
       "/:id",
       authorize(PERMISSIONS.USERS_VIEW, PERMISSIONS.TEAMS_VIEW),
       userValidators.getOne,
