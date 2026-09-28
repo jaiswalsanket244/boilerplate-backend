@@ -9,6 +9,7 @@ import {
 } from "@/modules/users/utils/users.enum";
 import { userHelper } from "@/modules/users/helpers/users.helper";
 import { USER_RESPONSE_MESSAGES } from "@/modules/users/utils/users.constant";
+import { serializeUsersCsv } from "@/modules/users/utils/users-csv.util";
 import { USER_TYPE } from "@/enums";
 import { User } from "@/db/models/user";
 import {
@@ -32,6 +33,44 @@ export class UserAdminController {
         data,
       });
     } catch (error) {
+      next(error);
+    }
+  };
+
+  public exportCsv: TUserController["empty"] = async (req, res, next) => {
+    const companyRef = req.user?.companyRef?.toString();
+
+    if (!companyRef) {
+      return ErrorResponse(res, httpStatus.BAD_REQUEST, {
+        message: USER_RESPONSE_MESSAGES.COMPANY_REF_REQUIRED,
+      });
+    }
+
+    try {
+      const users = await userHelper.findAllForExport(companyRef);
+      const csv = serializeUsersCsv(users);
+
+      safeEmit({
+        action: AuditAction.ADMIN_EXPORT_RUN,
+        status: AuditStatus.SUCCESS,
+        metadata: { resource: "users", format: "csv", rowCount: users.length },
+      });
+
+      const date = new Date().toISOString().slice(0, 10);
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="users-${date}.csv"`,
+      );
+      res.setHeader("Cache-Control", "no-store");
+      return res.status(httpStatus.OK).send(csv);
+    } catch (error) {
+      safeEmit({
+        action: AuditAction.ADMIN_EXPORT_RUN,
+        status: AuditStatus.FAILURE,
+        metadata: { resource: "users", format: "csv" },
+        failureReason: summarizeFailureReason(error),
+      });
       next(error);
     }
   };
