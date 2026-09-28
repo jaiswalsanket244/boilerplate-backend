@@ -79,6 +79,26 @@ describe("OTP routes", () => {
         // Outcome depends on whether the user exists; main check: no crash
         expect([200, 400, 404]).toContain(res.status);
       });
+
+      it("stores a signup OTP that expires 5 minutes after it is sent", async () => {
+        const payload = buildRequestOtpPayload({ purpose: OTP_PURPOSE.SIGNUP });
+        const sentAt = Date.now();
+
+        const res = await request(app)
+          .post("/api/auth/request-otp")
+          .send(payload)
+          .set("Accept", "application/json");
+
+        expect(res.status).toBe(200);
+        const record = await OtpVerificationModel.findOne({
+          identifier: payload.identifier,
+          purpose: OTP_PURPOSE.SIGNUP,
+        });
+        expect(record).not.toBeNull();
+        const ttlMs = record!.expiresAt.getTime() - sentAt;
+        expect(ttlMs).toBeGreaterThanOrEqual(5 * 60 * 1000);
+        expect(ttlMs).toBeLessThan(5 * 60 * 1000 + 5000);
+      });
     });
 
     describe("validation errors", () => {
