@@ -10,8 +10,11 @@ export interface IProducts {
   productImages?: string[];
   description: string;
   price?: number;
+  /** @deprecated Use `price`. Kept until the frontend product dialog stops using it. */
   costPrice?: number;
+  /** @deprecated Use `price`. Kept until the frontend product dialog stops using it. */
   retailPrice?: number;
+  /** @deprecated Use `price`. Kept until the frontend product dialog stops using it. */
   salePrice?: number;
   userRef?: mongoose.Types.ObjectId;
   companyRef: mongoose.Types.ObjectId;
