@@ -164,6 +164,23 @@ export class PaymentGatewayService {
   };
 
   /**
+   * Pauses billing for a subscription, optionally resuming automatically at `resumesAt` (unix seconds).
+   */
+  public pauseSubscription = async (
+    subscriptionId: string,
+    resumesAt?: number,
+  ) => {
+    return this.stripeSubscription.pauseSubscription(subscriptionId, resumesAt);
+  };
+
+  /**
+   * Resumes billing for a paused subscription.
+   */
+  public resumeSubscription = async (subscriptionId: string) => {
+    return this.stripeSubscription.resumeSubscription(subscriptionId);
+  };
+
+  /**
    * Fetches and deletes incomplete subscriptions for a customer.
    */
   public cleanupIncompleteSubscriptions = async (customerId: string) => {

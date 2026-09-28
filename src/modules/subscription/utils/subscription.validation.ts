@@ -16,6 +16,15 @@ const ChangeSubscriptionBodySchema = z.object({
   newPriceId: z.string().min(1, "New price ID is required"),
 });
 
+const PauseSubscriptionBodySchema = z.object({
+  resumesAt: z.coerce
+    .date()
+    .refine((date) => date.getTime() > Date.now(), {
+      message: "Resume date must be in the future",
+    })
+    .optional(),
+});
+
 const GetAllSubscribedUsersQuerySchema = z.object({
   page: z.coerce.number().optional(),
   pageSize: z.coerce.number().optional(),
@@ -43,6 +52,11 @@ const changeSubscriptionValidator = validate(
   validationErrorHandler,
 );
 
+const pauseSubscriptionValidator = validate(
+  { body: PauseSubscriptionBodySchema },
+  validationErrorHandler,
+);
+
 const getAllSubscribedUsersValidator = validate(
   { query: GetAllSubscribedUsersQuerySchema },
   validationErrorHandler,
@@ -52,5 +66,6 @@ export const subscriptionValidators = {
   createSubscription: createSubscriptionValidator,
   cancelSubscription: cancelSubscriptionValidator,
   changeSubscription: changeSubscriptionValidator,
+  pauseSubscription: pauseSubscriptionValidator,
   getAllSubscribedUsers: getAllSubscribedUsersValidator,
 };

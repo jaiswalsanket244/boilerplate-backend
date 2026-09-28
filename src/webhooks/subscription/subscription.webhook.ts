@@ -3,6 +3,7 @@ import { Company } from "@/db/models/company";
 import { Subscription } from "@/db/models/subscription";
 import { User } from "@/db/models/user";
 import { ErrorResponse, SuccessResponse } from "@/helpers/api-response";
+import { subscriptionHelper } from "@/modules/subscription/helpers/subscription.helper";
 import { STRIPE_SUBSCRIPTION_STATUS } from "@/modules/subscription/utils/subscription.enum";
 import { paymentGateway } from "@/providers/payment";
 import {
@@ -56,6 +57,22 @@ export class SubscriptionWebhook {
                 const existingSubscription = await Subscription.findOne({
                   stripeSubscriptionId: subscriptionEvent.id,
                 });
+
+                // Pause/resume updates keep Stripe status "active"; handle them here so
+                // they don't re-send the new-subscription email. previous_attributes
+                // catches a resume whose DB write (clearing pausedAt) landed first.
+                const pauseChanged =
+                  !!subscriptionEvent.pause_collection ||
+                  !!existingSubscription?.pausedAt ||
+                  "pause_collection" in (event.data.previous_attributes ?? {});
+                if (existingSubscription && pauseChanged) {
+                  await subscriptionHelper.syncPauseState(
+                    existingSubscription,
+                    subscriptionEvent,
+                    event.created,
+                  );
+                  break;
+                }
 
                 let response;
                 if (existingSubscription) {

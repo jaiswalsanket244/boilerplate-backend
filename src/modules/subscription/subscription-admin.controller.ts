@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { Subscription } from "@/db/models/subscription";
 import { subscriptionHelper } from "@/modules/subscription/helpers/subscription.helper";
 import { SUBSCRIPTION_MESSAGES } from "@/modules/subscription/utils/subscription.constant";
+import { STRIPE_SUBSCRIPTION_STATUS } from "@/modules/subscription/utils/subscription.enum";
 import { TSubscriptionController } from "@/modules/subscription/utils/subscription.types";
 import { paymentGateway } from "@/providers/payment";
 import { ErrorResponse, SuccessResponse } from "@/helpers/api-response";
@@ -149,6 +150,122 @@ export class SubscriptionAdminController {
   };
 
   /**
+   * Pause a subscription's billing instead of cancelling it
+   */
+  pauseSubscription: TSubscriptionController["pauseSubscription"] = async (
+    req,
+    res,
+    next,
+  ) => {
+    try {
+      const user = req.user!;
+      const subscription = await subscriptionHelper.findCurrentSubscription(
+        user.companyRef!,
+      );
+
+      if (!subscription?.stripeSubscriptionId) {
+        return ErrorResponse(res, status.NOT_FOUND, {
+          message: SUBSCRIPTION_MESSAGES.NO_ACTIVE_SUBSCRIPTION,
+        });
+      }
+      if (subscription.pausedAt) {
+        return ErrorResponse(res, status.BAD_REQUEST, {
+          message: SUBSCRIPTION_MESSAGES.ALREADY_PAUSED,
+        });
+      }
+      if (subscription.subscriptionCancellationRequested) {
+        return ErrorResponse(res, status.BAD_REQUEST, {
+          message: SUBSCRIPTION_MESSAGES.CANCELLATION_PENDING,
+        });
+      }
+
+      const { resumesAt } = req.body;
+      const pauseResumesAt = resumesAt
+        ? Math.floor(resumesAt.getTime() / 1000)
+        : null;
+
+      try {
+        await paymentGateway.pauseSubscription(
+          subscription.stripeSubscriptionId,
+          pauseResumesAt ?? undefined,
+        );
+      } catch {
+        return ErrorResponse(res, status.BAD_REQUEST, {
+          message: "Failed to pause subscription",
+        });
+      }
+
+      // Status stays ACTIVE until the paid period ends; the webhook flips it to PAUSED
+      const pausedAt = Math.floor(Date.now() / 1000);
+      await Subscription.updateOne(
+        { _id: subscription._id },
+        { $set: { pausedAt, pauseResumesAt } },
+      );
+
+      return SuccessResponse(res, status.OK, {
+        message: SUBSCRIPTION_MESSAGES.SUBSCRIPTION_PAUSED,
+        data: { pausedAt, pauseResumesAt },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Resume a paused subscription
+   */
+  resumeSubscription = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const user = req.user!;
+      const subscription = await subscriptionHelper.findCurrentSubscription(
+        user.companyRef!,
+      );
+
+      if (!subscription?.stripeSubscriptionId) {
+        return ErrorResponse(res, status.NOT_FOUND, {
+          message: SUBSCRIPTION_MESSAGES.NO_ACTIVE_SUBSCRIPTION,
+        });
+      }
+      if (!subscription.pausedAt) {
+        return ErrorResponse(res, status.BAD_REQUEST, {
+          message: SUBSCRIPTION_MESSAGES.NOT_PAUSED,
+        });
+      }
+
+      try {
+        await paymentGateway.resumeSubscription(
+          subscription.stripeSubscriptionId,
+        );
+      } catch {
+        return ErrorResponse(res, status.BAD_REQUEST, {
+          message: "Failed to resume subscription",
+        });
+      }
+
+      await Subscription.updateOne(
+        { _id: subscription._id },
+        {
+          $set: {
+            status: STRIPE_SUBSCRIPTION_STATUS.ACTIVE,
+            pausedAt: null,
+            pauseResumesAt: null,
+          },
+        },
+      );
+
+      return SuccessResponse(res, status.OK, {
+        message: SUBSCRIPTION_MESSAGES.SUBSCRIPTION_RESUMED,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
    * Change subscription plan
    */
   changeSubscription: TSubscriptionController["changeSubscription"] = async (
@@ -190,6 +307,13 @@ export class SubscriptionAdminController {
             changeType: "upgrade_from_free",
             effectiveDate: "immediate",
           },
+        });
+      }
+
+      // A plan change would restart billing while paused
+      if (currentSubscription.pausedAt) {
+        return ErrorResponse(res, status.BAD_REQUEST, {
+          message: SUBSCRIPTION_MESSAGES.RESUME_BEFORE_CHANGE,
         });
       }
 
