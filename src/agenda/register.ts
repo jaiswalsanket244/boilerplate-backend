@@ -4,6 +4,7 @@ import { StripeConnectHelper } from "@/agenda/helpers/stripe-connect.helper";
 import { deletePreviousMonthEntries } from "@/agenda/helpers/error-logs.helper";
 import { sendPasswordRotationReminders } from "@/agenda/helpers/password-rotation.helper";
 import { runAuditRetentionSweep } from "@/agenda/helpers/audit-retention.helper";
+import { sendSubscriptionRenewalReminders } from "@/agenda/helpers/subscription-renewal-reminder.helper";
 
 // Register every job definition. Call once, before agenda.start().
 export function registerAllJobs(agenda: Agenda): void {
@@ -38,4 +39,9 @@ export function registerAllJobs(agenda: Agenda): void {
       backoff: backoffStrategies.exponential({ delay: 60_000, maxRetries: 3 }),
     },
   );
+
+  // Single-attempt — sends email, so a retry would re-send.
+  agenda.define(JOBS.SUBSCRIPTION.RENEWAL_REMINDERS, async () => {
+    await sendSubscriptionRenewalReminders();
+  });
 }

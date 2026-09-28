@@ -15,4 +15,7 @@ export const JOBS = {
   AUDIT: {
     RETENTION_SWEEP: "audit:retention-sweep",
   },
+  SUBSCRIPTION: {
+    RENEWAL_REMINDERS: "subscription:renewal-reminders",
+  },
 } as const;
