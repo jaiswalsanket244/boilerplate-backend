@@ -40,6 +40,26 @@ export function getOtpExpiry(minutes: number = OTP_EXPIRY_MINUTES.LOGIN): Date {
 }
 
 /**
+ * Expiry window for an OTP. Login and password-reset codes deliberately stay
+ * short because they grant a session or reset; only email-confirmation codes get longer.
+ */
+export function getOtpExpiryMinutes(
+  identifier: string,
+  purpose: OTP_PURPOSE,
+): number {
+  const isEmail = identifier.includes("@");
+  if (
+    isEmail &&
+    (purpose === OTP_PURPOSE.SIGNUP || purpose === OTP_PURPOSE.VERIFICATION)
+  ) {
+    return OTP_EXPIRY_MINUTES.EMAIL_VERIFICATION;
+  }
+  return purpose === OTP_PURPOSE.SIGNUP
+    ? OTP_EXPIRY_MINUTES.SIGNUP
+    : OTP_EXPIRY_MINUTES.LOGIN;
+}
+
+/**
  * Check if OTP has expired
  */
 export function isOtpExpired(expiryDate: Date | string): boolean {
@@ -76,11 +96,7 @@ async function saveOtp(
 ): Promise<string> {
   const otp = customOtp ?? generateOtp(OTP_CONFIG.LENGTH);
 
-  const expiryMinutes =
-    purpose === OTP_PURPOSE.SIGNUP
-      ? OTP_EXPIRY_MINUTES.SIGNUP
-      : OTP_EXPIRY_MINUTES.LOGIN;
-  const expiresAt = getOtpExpiry(expiryMinutes);
+  const expiresAt = getOtpExpiry(getOtpExpiryMinutes(identifier, purpose));
 
   // Remove previous active OTPs for this identity + purpose to keep collection clean
   await OtpVerificationModel.deleteMany({

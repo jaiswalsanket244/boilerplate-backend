@@ -1,5 +1,6 @@
 import { createApp } from "@/app";
 import { OtpVerificationModel, OTP_PURPOSE } from "@/db/models/otpVerification";
+import { getOtpExpiryMinutes } from "@/modules/auth/helpers/otp.helper";
 import { faker } from "@faker-js/faker";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -78,6 +79,42 @@ describe("OTP routes", () => {
 
         // Outcome depends on whether the user exists; main check: no crash
         expect([200, 400, 404]).toContain(res.status);
+      });
+
+      it("stores an emailed VERIFICATION OTP that expires in 15 minutes", async () => {
+        const { user } = await createTestSession();
+        const before = Date.now();
+
+        const res = await request(app)
+          .post("/api/auth/request-otp")
+          .send({ identifier: user.email, purpose: OTP_PURPOSE.VERIFICATION })
+          .set("Accept", "application/json");
+
+        expect(res.status).toBe(200);
+        const record = await OtpVerificationModel.findOne({
+          identifier: user.email.toLowerCase(),
+          purpose: OTP_PURPOSE.VERIFICATION,
+        });
+        const ttlMs = record!.expiresAt.getTime() - before;
+        expect(ttlMs).toBeGreaterThanOrEqual(15 * 60 * 1000);
+        expect(ttlMs).toBeLessThan(16 * 60 * 1000);
+      });
+    });
+
+    describe("expiry windows", () => {
+      const email = "someone@example.com";
+      const phone = "+911234567890";
+
+      it.each([
+        [email, OTP_PURPOSE.SIGNUP, 15],
+        [email, OTP_PURPOSE.VERIFICATION, 15],
+        [email, OTP_PURPOSE.LOGIN, 5],
+        [email, OTP_PURPOSE.PASSWORD_RESET, 5],
+        [phone, OTP_PURPOSE.SIGNUP, 10],
+        [phone, OTP_PURPOSE.VERIFICATION, 5],
+        [phone, OTP_PURPOSE.LOGIN, 5],
+      ])("%s + %s expires in %i minutes", (identifier, purpose, minutes) => {
+        expect(getOtpExpiryMinutes(identifier, purpose)).toBe(minutes);
       });
     });
 
