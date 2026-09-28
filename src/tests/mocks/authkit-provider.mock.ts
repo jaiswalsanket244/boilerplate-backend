@@ -123,6 +123,8 @@ export const mockAuthKitProvider = {
   createMagicLinkSession: vi.fn(),
   verifyMagicLinkToken: vi.fn(),
   generateOAuthUrl: vi.fn(),
+  deleteUser: vi.fn(),
+  deleteOrganizationMembership: vi.fn(),
 };
 
 export class AuthKitProvider {
@@ -133,6 +135,9 @@ export class AuthKitProvider {
   createMagicLinkSession = mockAuthKitProvider.createMagicLinkSession;
   verifyMagicLinkToken = mockAuthKitProvider.verifyMagicLinkToken;
   generateOAuthUrl = mockAuthKitProvider.generateOAuthUrl;
+  deleteUser = mockAuthKitProvider.deleteUser;
+  deleteOrganizationMembership =
+    mockAuthKitProvider.deleteOrganizationMembership;
 }
 
 vi.mock(

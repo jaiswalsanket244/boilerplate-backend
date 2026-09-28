@@ -1,6 +1,7 @@
 import envConfig from "@/config/env";
 import { Company } from "@/db/models/company";
 import { User } from "@/db/models/user";
+import { STATUS } from "@/enums";
 import { ErrorResponse, SuccessResponse } from "@/helpers/api-response";
 import { ObjectId } from "@/helpers/common";
 import { workos } from "@/providers/auth/authkit.provider";
@@ -102,10 +103,13 @@ export class AuthkitWebhook {
            * swap for a status update if soft-delete is preferred.
            */
           const providerUser = event.data;
+          // Self-deletion (DELETE /api/user/me) removes the provider user
+          // itself; keep that anonymised DELETED record instead of erasing it.
           await User.deleteOne({
             ...(providerUser.externalId
               ? { _id: ObjectId(providerUser.externalId) }
               : { externalUserId: providerUser.id }),
+            status: { $ne: STATUS.DELETED },
           });
           break;
         }

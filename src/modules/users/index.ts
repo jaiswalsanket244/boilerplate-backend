@@ -23,6 +23,7 @@ export class UserRouter {
     const controller = new UserController();
 
     this.router.get("/me", userValidators.me, controller.me);
+    this.router.delete("/me", userValidators.deleteMe, controller.deleteMe);
 
     this.router.put(
       "/profile",

@@ -15,6 +15,8 @@ import { authService } from "@/providers/auth";
 import { emailService } from "@/providers/email";
 import status from "http-status";
 import { generateAuthTokens } from "@/modules/auth/helpers/token.helper";
+import { deleteOwnAccount } from "@/modules/users/helpers/delete-account.helper";
+import { DELETE_ACCOUNT_RESULT } from "@/modules/users/utils/users.enum";
 
 /**
  * UserController class for handling user-related HTTP requests
@@ -62,6 +64,42 @@ export class UserController {
           isPasswordExpired: rotationState.isBlocked,
           passwordExpiryDaysLeft: rotationState.daysLeft,
         },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Delete (anonymise) the signed-in user's own account
+   */
+  deleteMe: TUserController["deleteMe"] = async (req, res, next) => {
+    try {
+      if (!req.user) {
+        return ErrorResponse(res, status.UNAUTHORIZED, {
+          message: USER_RESPONSE_MESSAGES.UNAUTHORIZED,
+        });
+      }
+
+      const result = await deleteOwnAccount(req.user);
+
+      if (result === DELETE_ACCOUNT_RESULT.SOLE_ADMIN) {
+        return ErrorResponse(res, status.CONFLICT, {
+          message: USER_RESPONSE_MESSAGES.SOLE_ADMIN_CANNOT_DELETE,
+        });
+      }
+      if (result === DELETE_ACCOUNT_RESULT.SUPER_ADMIN_NOT_ALLOWED) {
+        return ErrorResponse(res, status.FORBIDDEN, {
+          message: USER_RESPONSE_MESSAGES.SUPER_ADMIN_CANNOT_DELETE,
+        });
+      }
+
+      if (!req.isMobile) {
+        cookieHelper.clearAuthCookies(res);
+      }
+
+      return SuccessResponse(res, status.OK, {
+        message: USER_RESPONSE_MESSAGES.ACCOUNT_DELETED,
       });
     } catch (error) {
       next(error);
