@@ -5,6 +5,7 @@ import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTestSession } from "@/tests/utils/auth";
+import { OTP_EXPIRY_MINUTES } from "@/modules/auth/utils/auth.constant";
 
 /**
  * OTP Routes
@@ -49,6 +50,16 @@ function buildVerifyOtpPayload(overrides: Record<string, unknown> = {}) {
 // ---------------------------------------------------------------------------
 // Suite
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Unit: OTP expiry constants
+// ---------------------------------------------------------------------------
+
+describe("OTP_EXPIRY_MINUTES", () => {
+  it("signup OTP expires after 5 minutes", () => {
+    expect(OTP_EXPIRY_MINUTES.SIGNUP).toBe(5);
+  });
+});
 
 describe("OTP routes", () => {
   const app = createApp();

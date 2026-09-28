@@ -5,7 +5,7 @@ import { USER_TYPE } from "@/enums";
  */
 export const OTP_EXPIRY_MINUTES = {
   LOGIN: 5,
-  SIGNUP: 10,
+  SIGNUP: 5,
   PHONE: 5,
   MFA_RESET: 5,
 } as const;
