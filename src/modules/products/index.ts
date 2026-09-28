@@ -1,8 +1,10 @@
 import { Middleware } from "@/middleware/auth";
 import { ProductController } from "@/modules/products/product.controller";
+import { ProductReviewController } from "@/modules/products/product-review.controller";
 import { ProductsAdminController } from "@/modules/products/product-admin.controller";
 import { ProductSuperAdminController } from "@/modules/products/product-super-admin.controller";
 import { productValidators } from "@/modules/products/utils/product.validation";
+import { productReviewValidators } from "@/modules/products/utils/product-review.validation";
 import { Router } from "express";
 import { authorize } from "@/middleware/authorize";
 import { PERMISSIONS } from "@/enums";
@@ -21,6 +23,7 @@ export class ProductsRouter {
 
   private initializeRoutes() {
     const controller = new ProductController();
+    const reviewController = new ProductReviewController();
 
     this.router.get(
       "/",
@@ -33,6 +36,18 @@ export class ProductsRouter {
       authorize(PERMISSIONS.PRODUCTS_VIEW),
       productValidators.getProductById,
       controller.getOne,
+    );
+    this.router.get(
+      "/:id/reviews",
+      authorize(PERMISSIONS.PRODUCTS_VIEW),
+      productReviewValidators.getProductReviews,
+      reviewController.get,
+    );
+    this.router.post(
+      "/:id/reviews",
+      authorize(PERMISSIONS.PRODUCTS_VIEW),
+      productReviewValidators.createProductReview,
+      reviewController.create,
     );
   }
 }

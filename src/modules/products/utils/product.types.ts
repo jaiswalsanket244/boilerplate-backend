@@ -2,6 +2,10 @@ import {
   productValidators,
   GetProductsQuerySchema,
 } from "@/modules/products/utils/product.validation";
+import {
+  productReviewValidators,
+  GetProductReviewsQuerySchema,
+} from "@/modules/products/utils/product-review.validation";
 import { TObjectId } from "@/types";
 import z from "zod";
 
@@ -23,3 +27,12 @@ export interface IProduct {
   userRef?: TObjectId | string;
   sellerStripeAccountId?: string;
 }
+
+export type TProductReviewController = typeof productReviewValidators;
+
+export type TGetProductReviewsQuery = z.infer<
+  typeof GetProductReviewsQuerySchema
+> & {
+  productRef: TObjectId;
+  companyRef: TObjectId;
+};

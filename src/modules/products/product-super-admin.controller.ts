@@ -27,7 +27,7 @@ export class ProductSuperAdminController {
     try {
       const id: string = req.params.id;
 
-      const data = await productHelper.findOne({ _id: ObjectId(id) });
+      const data = await productHelper.findOneWithRating({ _id: ObjectId(id) });
 
       return SuccessResponse(res, httpStatus.OK, { message: "Success.", data });
     } catch (error) {
