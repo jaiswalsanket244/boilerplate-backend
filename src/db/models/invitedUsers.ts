@@ -72,7 +72,7 @@ const InvitedUserSchema = new mongoose.Schema<IInvitedUsersDocument>(
     },
     expiry: {
       type: Number,
-      default: Date.now() + 60 * 60 * 168 * 1000, // expire in 7 days
+      default: Date.now() + 60 * 60 * 336 * 1000, // expire in 14 days
     },
     errorMessages: {
       type: String,

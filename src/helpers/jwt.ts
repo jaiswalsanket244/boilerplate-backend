@@ -8,7 +8,7 @@ export const JWT_CONFIG: Record<string, SignOptions["expiresIn"]> = {
   ACCESS_TOKEN_EXPIRY: "15min",
   REFRESH_TOKEN_EXPIRY: "7days",
   RESET_PASSWORD_TOKEN_EXPIRY: "1h",
-  INVITE_TOKEN_EXPIRY: "7days",
+  INVITE_TOKEN_EXPIRY: "14days",
   PENDING_MFA_TOKEN_EXPIRY: "15m",
 } as const;
 
