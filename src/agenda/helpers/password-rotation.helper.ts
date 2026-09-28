@@ -8,8 +8,8 @@ import utc from "dayjs/plugin/utc.js";
 dayjs.extend(utc);
 
 // Reminder days before password expiry
-// Send reminder email before 14, 7 and 1 day of password expiry
-const REMINDER_DAYS = new Set([14, 7, 1]);
+// Send reminder email before 7 and 1 day of password expiry
+const REMINDER_DAYS = new Set([7, 1]);
 
 /**
  * Sends password rotation reminders to users (runs as a scheduled job).

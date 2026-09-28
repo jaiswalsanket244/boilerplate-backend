@@ -427,7 +427,7 @@ agenda/
 | ---------------------------- | ------------------------------------ | -------------------------------------- |
 | `0 0 * * *` (daily midnight) | `stripe:process-transfers`           | Process pending Stripe Connect payouts |
 | `0 0 1 * *` (1st of month)   | `logs:cleanup-prev-month`            | Clean up old error logs                |
-| `0 9 * * *` (daily 9 AM)     | `security:password-expiry-reminders` | Email 14/7/1-day expiry warnings       |
+| `0 9 * * *` (daily 9 AM)     | `security:password-expiry-reminders` | Email 7/1-day expiry warnings          |
 | `0 2 * * *` (daily 2 AM)     | `audit:retention-sweep`              | Sweep expired audit rows to cold tier  |
 
 **Start separately:** `npm run worker-dev` (development) or `npm run worker-start` (production)
