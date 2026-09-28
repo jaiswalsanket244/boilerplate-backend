@@ -12,6 +12,7 @@
     "worker-start": "node server/agenda/worker.js",
     "roles:sync": "tsx src/scripts/create-roles-and-permissions.ts",
     "audit:archive-setup": "tsx src/scripts/audit-archive-setup.ts",
+    "user-query:rename-feedback-subject": "tsx src/scripts/rename-feedback-subject.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",

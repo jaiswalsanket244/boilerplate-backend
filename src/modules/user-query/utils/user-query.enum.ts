@@ -2,7 +2,7 @@ export enum USER_QUERY_SUBJECT {
   GENERAL = "General Inquiry",
   TECHNICAL = "Technical Support",
   BILLING = "Billing and Payments",
-  FEATURE = "Feature Requests or Feedback",
+  FEATURE = "Feedback",
 }
 
 export enum USER_QUERY_STATUS {
