@@ -1,11 +1,11 @@
-import { Subscription } from "@/db/models/subscription";
+import { ISubscriptionDocument, Subscription } from "@/db/models/subscription";
 import { paymentGateway } from "@/providers/payment";
 import envConfig from "@/config/env";
 import Stripe from "stripe";
 import { IUser, User } from "@/db/models/user";
 import { PaginatedSearchQuery } from "@/types/query.types";
 import { createFacetPipeline } from "@/helpers/query";
-import { STATUS } from "@/enums";
+import { STRIPE_SUBSCRIPTION_STATUS } from "@/modules/subscription/utils/subscription.enum";
 import {
   ISubscription,
   IUserPlanResponse,
@@ -63,7 +63,85 @@ class SubscriptionHelper {
       planId: subscription?.planId,
       stripeSubscriptionId: subscription?.stripeSubscriptionId,
       billingCycle: subscription?.currentPeriodEnds,
+      status: subscription.status,
+      pausedAt: subscription.pausedAt ?? null,
+      pauseResumesAt: subscription.pauseResumesAt ?? null,
     };
+  };
+
+  /**
+   * Find the company's current (active or paused) subscription
+   */
+  findCurrentSubscription = async (companyRef: TObjectId) => {
+    return Subscription.findOne({
+      companyRef,
+      status: {
+        $in: [
+          STRIPE_SUBSCRIPTION_STATUS.ACTIVE,
+          STRIPE_SUBSCRIPTION_STATUS.PAUSED,
+        ],
+      },
+    });
+  };
+
+  /**
+   * Sync pause state from a Stripe `customer.subscription.updated` event.
+   * Access stays on until the already-paid period ends, then status becomes PAUSED.
+   */
+  syncPauseState = async (
+    existing: ISubscriptionDocument,
+    stripeSubscription: Stripe.Subscription,
+    eventCreated: number,
+  ) => {
+    // API 2025-03-31+ moved the billing period onto the item (what this webhook
+    // already reads); the installed SDK types still have it on the subscription.
+    const item = stripeSubscription.items?.data[0] as
+      | (Stripe.SubscriptionItem & {
+          current_period_start?: number;
+          current_period_end?: number;
+        })
+      | undefined;
+    const periodStart =
+      item?.current_period_start ?? stripeSubscription.current_period_start;
+    const periodFields = {
+      currentPeriodStarts: periodStart,
+      currentPeriodEnds:
+        item?.current_period_end ?? stripeSubscription.current_period_end,
+    };
+    const pauseCollection = stripeSubscription.pause_collection;
+
+    if (!pauseCollection) {
+      // Resumed, either by the customer or automatically at resumes_at
+      return Subscription.updateOne(
+        { _id: existing._id },
+        {
+          $set: {
+            ...periodFields,
+            status: STRIPE_SUBSCRIPTION_STATUS.ACTIVE,
+            pausedAt: null,
+            pauseResumesAt: null,
+          },
+        },
+      );
+    }
+
+    // Fall back to the event time when the pause was set outside this app (e.g. Stripe Dashboard)
+    const pausedAt = existing.pausedAt ?? eventCreated;
+    const paidPeriodEnded = periodStart >= pausedAt;
+
+    return Subscription.updateOne(
+      { _id: existing._id },
+      {
+        $set: {
+          ...periodFields,
+          status: paidPeriodEnded
+            ? STRIPE_SUBSCRIPTION_STATUS.PAUSED
+            : STRIPE_SUBSCRIPTION_STATUS.ACTIVE,
+          pausedAt,
+          pauseResumesAt: pauseCollection.resumes_at ?? null,
+        },
+      },
+    );
   };
 
   /**
@@ -103,6 +181,10 @@ class SubscriptionHelper {
     const skips = (page - 1) * pageSize;
 
     const facetPipeline = createFacetPipeline(page, skips, pageSize);
+    const listedStatuses = [
+      STRIPE_SUBSCRIPTION_STATUS.ACTIVE,
+      STRIPE_SUBSCRIPTION_STATUS.PAUSED,
+    ];
 
     return Subscription.aggregate([
       {
@@ -121,9 +203,9 @@ class SubscriptionHelper {
                 { "user.name.last": { $regex: searchValue, $options: "i" } },
                 { planName: { $regex: searchValue, $options: "i" } },
               ],
-              status: STATUS.ACTIVE,
+              status: { $in: listedStatuses },
             }
-          : { status: STATUS.ACTIVE },
+          : { status: { $in: listedStatuses } },
       },
       ...facetPipeline,
     ]);

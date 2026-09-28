@@ -48,6 +48,17 @@ export class AdminSubscriptionRouter {
       subscriptionValidators.cancelSubscription,
       adminController.cancelSubscription,
     );
+    this.router.put(
+      "/pause",
+      authorize(PERMISSIONS.SUBSCRIPTION_MANAGE),
+      subscriptionValidators.pauseSubscription,
+      adminController.pauseSubscription,
+    );
+    this.router.put(
+      "/resume",
+      authorize(PERMISSIONS.SUBSCRIPTION_MANAGE),
+      adminController.resumeSubscription,
+    );
     this.router.post(
       "/plans",
       authorize(PERMISSIONS.SUBSCRIPTION_WRITE),

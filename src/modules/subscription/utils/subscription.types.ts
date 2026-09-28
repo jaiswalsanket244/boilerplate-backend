@@ -14,6 +14,9 @@ export interface IUserPlanResponse {
   planId?: string;
   stripeSubscriptionId?: string;
   billingCycle?: Date | number;
+  status: string;
+  pausedAt: number | null;
+  pauseResumesAt: number | null;
 }
 
 export interface ISubscription {

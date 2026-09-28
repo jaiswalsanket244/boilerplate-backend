@@ -8,5 +8,12 @@ export const SUBSCRIPTION_MESSAGES = {
   SUBSCRIPTION_CHANGED: "Subscription changed successfully.",
   UPGRADED_FROM_FREE: "Successfully upgraded from free plan.",
   ALREADY_SUBSCRIBED: "You are already subscribed to this plan!",
+  SUBSCRIPTION_PAUSED: "Subscription paused successfully.",
+  SUBSCRIPTION_RESUMED: "Subscription resumed successfully.",
+  NO_ACTIVE_SUBSCRIPTION: "No active subscription found.",
+  ALREADY_PAUSED: "Subscription is already paused.",
+  NOT_PAUSED: "Subscription is not paused.",
+  CANCELLATION_PENDING: "Subscription is already scheduled for cancellation.",
+  RESUME_BEFORE_CHANGE: "Resume your subscription before changing plans.",
   USERS_FETCHED_SUCCESS: "Subscribed users fetched successfully.",
 } as const;

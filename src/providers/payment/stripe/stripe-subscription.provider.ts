@@ -14,6 +14,27 @@ export class StripeSubscriptionProvider {
     });
   };
 
+  // "void" means invoices that come due while paused are voided, so the
+  // customer is never charged for paused time (CYR-157 product decision).
+  public pauseSubscription = async (
+    subscriptionId: string,
+    resumesAt?: number,
+  ) => {
+    return this.stripe.subscriptions.update(subscriptionId, {
+      pause_collection: {
+        behavior: "void",
+        ...(resumesAt ? { resumes_at: resumesAt } : {}),
+      },
+    });
+  };
+
+  public resumeSubscription = async (subscriptionId: string) => {
+    // Stripe clears pause_collection when it is set to an empty string
+    return this.stripe.subscriptions.update(subscriptionId, {
+      pause_collection: "",
+    });
+  };
+
   public createNewSubscription = async (
     customerId: string,
     priceId: string,

@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { STATUS } from "@/enums";
+import { STRIPE_SUBSCRIPTION_STATUS } from "@/modules/subscription/utils/subscription.enum";
 import { auditPlugin } from "@/db/plugins/audit/audit.plugin";
 
 const ObjectId = mongoose.Schema.Types.ObjectId;
@@ -17,9 +17,11 @@ export interface ISubscription {
   subscriptionCancellationRequested?: boolean;
   stripeCustomerId?: string;
   productId?: string;
-  status: STATUS;
+  status: STRIPE_SUBSCRIPTION_STATUS;
   companyRef: mongoose.Types.ObjectId;
   subscriptionActiveUntil?: number;
+  pausedAt?: number | null;
+  pauseResumesAt?: number | null;
 }
 
 export interface ISubscriptionDocument
@@ -77,14 +79,24 @@ const SubscriptionSchema = new mongoose.Schema<ISubscriptionDocument>(
     },
     status: {
       type: String,
-      enum: Object.values(STATUS),
+      enum: Object.values(STRIPE_SUBSCRIPTION_STATUS),
       required: true,
-      default: STATUS.ACTIVE,
+      default: STRIPE_SUBSCRIPTION_STATUS.ACTIVE,
     },
     companyRef: {
       type: ObjectId,
       required: true,
       ref: "Company",
+    },
+    // Unix seconds. Set while billing is paused; status turns PAUSED once the
+    // already-paid period ends (the first period that starts after pausedAt).
+    pausedAt: {
+      type: Number,
+      default: null,
+    },
+    pauseResumesAt: {
+      type: Number, // unix seconds, null when paused until the customer resumes
+      default: null,
     },
     subscriptionActiveUntil: {
       type: Number,
