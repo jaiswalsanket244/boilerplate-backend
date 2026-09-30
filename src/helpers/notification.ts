@@ -49,5 +49,8 @@ export const generateDefaultNotificationPreferences = (): Record<
     {} as Record<NOTIFICATION_TYPE, INotificationChannels>,
   );
 
+  // Billing emails (e.g. renewal reminders) are opt-out rather than opt-in.
+  defaults[NOTIFICATION_TYPE.BILLING][NOTIFICATION_CHANNEL.EMAIL] = true;
+
   return defaults;
 };

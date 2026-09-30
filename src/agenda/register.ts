@@ -3,6 +3,7 @@ import { JOBS } from "@/agenda/utils/job-names.constant";
 import { StripeConnectHelper } from "@/agenda/helpers/stripe-connect.helper";
 import { deletePreviousMonthEntries } from "@/agenda/helpers/error-logs.helper";
 import { sendPasswordRotationReminders } from "@/agenda/helpers/password-rotation.helper";
+import { sendSubscriptionRenewalReminders } from "@/agenda/helpers/subscription-renewal-reminder.helper";
 import { runAuditRetentionSweep } from "@/agenda/helpers/audit-retention.helper";
 
 // Register every job definition. Call once, before agenda.start().
@@ -26,6 +27,11 @@ export function registerAllJobs(agenda: Agenda): void {
   // Single-attempt — sends email, so a retry would re-send.
   agenda.define(JOBS.SECURITY.PASSWORD_EXPIRY_REMINDERS, async () => {
     await sendPasswordRotationReminders();
+  });
+
+  // Single-attempt — sends email, so a retry would re-send.
+  agenda.define(JOBS.SUBSCRIPTION.RENEWAL_REMINDERS, async () => {
+    await sendSubscriptionRenewalReminders();
   });
 
   // Idempotent (checkpoint-driven sweep), so safe to retry.
