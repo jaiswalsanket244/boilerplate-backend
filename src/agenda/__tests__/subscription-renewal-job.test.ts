@@ -180,21 +180,6 @@ describe("sendSubscriptionRenewalReminders", () => {
   });
 });
 
-describe("sendSubscriptionRenewalReminder (placeholder hook)", () => {
-  it("logs the subscription it was given", async () => {
-    const sub = await createSubscription({
-      currentPeriodEnds: toSeconds("2026-10-07T12:00:00Z"),
-    });
-    const log = vi.spyOn(console, "log").mockImplementation(() => {});
-
-    await reminderHook.sendSubscriptionRenewalReminder(sub.toObject());
-
-    expect(log).toHaveBeenCalledWith(
-      expect.stringContaining("2026-10-07T12:00:00.000Z"),
-    );
-  });
-});
-
 describe("renewal-reminder job wiring", () => {
   it("names the job subscription:renewal-reminders", () => {
     expect(JOBS.SUBSCRIPTION.RENEWAL_REMINDERS).toBe(

@@ -65,6 +65,7 @@ export enum NOTIFICATION_CHANNEL {
 export enum NOTIFICATION_TYPE {
   CHAT_MESSAGE = "chat_message",
   PROFILE_AND_PASSWORD = "profile_and_password",
+  SUBSCRIPTION_RENEWAL = "subscription_renewal",
 }
 
 export enum NOTIFICATION_TITLE {
