@@ -12,6 +12,9 @@ export const JOBS = {
   SECURITY: {
     PASSWORD_EXPIRY_REMINDERS: "security:password-expiry-reminders",
   },
+  SUBSCRIPTION: {
+    RENEWAL_REMINDERS: "subscription:renewal-reminders",
+  },
   AUDIT: {
     RETENTION_SWEEP: "audit:retention-sweep",
   },

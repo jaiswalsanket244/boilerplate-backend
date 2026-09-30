@@ -20,6 +20,7 @@ export interface ISubscription {
   status: STATUS;
   companyRef: mongoose.Types.ObjectId;
   subscriptionActiveUntil?: number;
+  renewalReminderSentForPeriodEnd?: number;
 }
 
 export interface ISubscriptionDocument
@@ -92,6 +93,11 @@ const SubscriptionSchema = new mongoose.Schema<ISubscriptionDocument>(
       set: (d: number) => {
         return d * 1000;
       },
+    },
+    // currentPeriodEnds value the renewal reminder was sent for; a renewal changes currentPeriodEnds and re-arms it.
+    renewalReminderSentForPeriodEnd: {
+      type: Number,
+      required: false,
     },
   },
   { timestamps: true },
