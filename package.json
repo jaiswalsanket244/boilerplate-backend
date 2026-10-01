@@ -11,6 +11,7 @@
     "start": "node server/server.js",
     "worker-start": "node server/agenda/worker.js",
     "roles:sync": "tsx src/scripts/create-roles-and-permissions.ts",
+    "notifications:migrate-isread": "tsx src/scripts/rename-notification-isopened.ts",
     "audit:archive-setup": "tsx src/scripts/audit-archive-setup.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
