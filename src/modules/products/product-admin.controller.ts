@@ -3,6 +3,7 @@ import { productHelper } from "@/modules/products/helpers/product.helper";
 import { ErrorResponse, SuccessResponse } from "@/helpers/api-response";
 import { TProductController } from "@/modules/products/utils/product.types";
 import { ObjectId } from "@/helpers/common";
+import { PRODUCT_MESSAGES } from "@/modules/products/utils/product.constant";
 
 /**
  * ProductsAdminController class for handling admin product-related HTTP requests
@@ -16,10 +17,23 @@ export class ProductsAdminController {
 
     try {
       const document = req.body;
+      const companyRef = user.companyRef!._id;
+
+      if (
+        document.categoryRef &&
+        !(await productHelper.categoryBelongsToCompany(
+          document.categoryRef,
+          companyRef,
+        ))
+      ) {
+        return ErrorResponse(res, status.BAD_REQUEST, {
+          message: PRODUCT_MESSAGES.INVALID_CATEGORY,
+        });
+      }
 
       const data = await productHelper.create({
         ...document,
-        companyRef: user.companyRef!._id,
+        companyRef,
       });
       return SuccessResponse(res, status.OK, { message: "Success.", data });
     } catch (error) {
@@ -36,9 +50,22 @@ export class ProductsAdminController {
     try {
       const id: string = req.params.id;
 
-      const update = req.body;
+      // Drop body companyRef: an admin must not move a product (and its category) to another company.
+      const { companyRef: _ignored, ...update } = req.body;
 
       const companyRef = user.companyRef!;
+
+      if (
+        update.categoryRef &&
+        !(await productHelper.categoryBelongsToCompany(
+          update.categoryRef,
+          companyRef._id,
+        ))
+      ) {
+        return ErrorResponse(res, status.BAD_REQUEST, {
+          message: PRODUCT_MESSAGES.INVALID_CATEGORY,
+        });
+      }
 
       const data = await productHelper.findAndUpdate(
         { _id: ObjectId(id), companyRef },

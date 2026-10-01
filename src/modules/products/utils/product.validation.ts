@@ -4,11 +4,17 @@ import { validate } from "zod-express-validator";
 
 // ==================== Schemas ====================
 
+// Strict 24-hex check: mongoose.isValidObjectId also accepts any 12-char string.
+const CategoryRefSchema = z
+  .string()
+  .regex(/^[a-f\d]{24}$/i, "Invalid category ID");
+
 export const GetProductsQuerySchema = z.object({
   page: z.coerce.number().optional(),
   pageSize: z.coerce.number().optional(),
   searchValue: z.string().optional(),
   sortBy: z.string().optional(),
+  categoryRef: CategoryRefSchema.optional(),
 });
 
 const GetProductByIdParamsSchema = z.object({
@@ -23,6 +29,7 @@ export const CreateProductBodySchema = z.object({
   retailPrice: z.coerce.number().min(0).optional(),
   salePrice: z.coerce.number().min(0).optional(),
   companyRef: z.string().optional(),
+  categoryRef: CategoryRefSchema.nullable().optional(),
 });
 
 export const UpdateProductBodySchema = CreateProductBodySchema.partial();

@@ -20,6 +20,7 @@ export interface IProduct {
   retailPrice?: number;
   salePrice?: number;
   companyRef?: TObjectId | string;
+  categoryRef?: TObjectId | string | null;
   userRef?: TObjectId | string;
   sellerStripeAccountId?: string;
 }

@@ -1,9 +1,12 @@
 import httpStatus from "http-status";
 
-import { IProducts } from "@/db/models/products";
 import { productHelper } from "@/modules/products/helpers/product.helper";
-import { TProductController } from "@/modules/products/utils/product.types";
-import { SuccessResponse } from "@/helpers/api-response";
+import { PRODUCT_MESSAGES } from "@/modules/products/utils/product.constant";
+import {
+  IProduct,
+  TProductController,
+} from "@/modules/products/utils/product.types";
+import { ErrorResponse, SuccessResponse } from "@/helpers/api-response";
 import { ObjectId } from "@/helpers/common";
 
 export class ProductSuperAdminController {
@@ -45,11 +48,40 @@ export class ProductSuperAdminController {
       const update = req.body;
       const { companyRef, ...rest } = update;
 
-      const updatedProduct: Partial<IProducts> = { ...rest };
+      const updatedProduct: IProduct = { ...rest };
 
       if (companyRef) {
         updatedProduct.companyRef = ObjectId(companyRef);
       }
+
+      if (companyRef || rest.categoryRef) {
+        const existing = await productHelper.findOne({ _id: ObjectId(id) });
+        const targetCompanyRef = companyRef ?? existing?.companyRef;
+
+        if (rest.categoryRef && existing) {
+          const isValid = await productHelper.categoryBelongsToCompany(
+            rest.categoryRef,
+            targetCompanyRef!,
+          );
+          if (!isValid) {
+            return ErrorResponse(res, httpStatus.BAD_REQUEST, {
+              message: PRODUCT_MESSAGES.INVALID_CATEGORY,
+            });
+          }
+        }
+
+        // Moving to another company without a new category: always unset, even if `existing`
+        // showed none, so a category assigned between this read and the write can't follow the
+        // product into a company it doesn't belong to.
+        if (
+          rest.categoryRef === undefined &&
+          existing &&
+          !existing.companyRef.equals(ObjectId(companyRef!))
+        ) {
+          updatedProduct.categoryRef = null;
+        }
+      }
+
       const data = await productHelper.findAndUpdate(
         { _id: ObjectId(id) },
         updatedProduct,
@@ -71,6 +103,18 @@ export class ProductSuperAdminController {
 
       if (!document.companyRef) {
         throw new Error("Company Ref is required");
+      }
+
+      if (
+        document.categoryRef &&
+        !(await productHelper.categoryBelongsToCompany(
+          document.categoryRef,
+          document.companyRef,
+        ))
+      ) {
+        return ErrorResponse(res, httpStatus.BAD_REQUEST, {
+          message: PRODUCT_MESSAGES.INVALID_CATEGORY,
+        });
       }
 
       const data = await productHelper.create({

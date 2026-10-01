@@ -15,6 +15,7 @@ export interface IProducts {
   salePrice?: number;
   userRef?: mongoose.Types.ObjectId;
   companyRef: mongoose.Types.ObjectId;
+  categoryRef?: mongoose.Types.ObjectId;
   status: STATUS;
 }
 
@@ -62,6 +63,12 @@ const ProductSchema = new mongoose.Schema<IProductsDocument>(
       type: ObjectId,
       required: true,
       ref: "Company",
+    },
+    categoryRef: {
+      type: ObjectId,
+      required: false,
+      ref: "ProductCategory",
+      index: true,
     },
     status: {
       type: String,

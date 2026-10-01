@@ -7,6 +7,7 @@ import { AdminCompanyRouter } from "@/modules/company";
 import { CardRouter } from "@/modules/cards";
 import { AdminUsersRouter } from "@/modules/users";
 import { AdminProductsRouter } from "@/modules/products";
+import { AdminProductCategoriesRouter } from "@/modules/product-categories";
 import { AdminUserQueryRouter } from "@/modules/user-query";
 import { AdminRolesRouter } from "@/modules/roles";
 import { AdminAuditLogsRouter } from "@/modules/audit-logs";
@@ -17,6 +18,10 @@ export class AdminRouter {
     this.router = Router();
     this.router.use("/user", new AdminUsersRouter().router);
     this.router.use("/products", new AdminProductsRouter().router);
+    this.router.use(
+      "/product-categories",
+      new AdminProductCategoriesRouter().router,
+    );
     this.router.use("/invite-users", new AdminInviteUserRouter().router);
     this.router.use("/subscription", new AdminSubscriptionRouter().router);
     this.router.use("/stripe-connect", new AdminStripeConnectRouter().router);
