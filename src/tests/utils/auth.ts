@@ -1,5 +1,6 @@
 import { Company, ICompanyDocument } from "@/db/models/company";
 import { Products } from "@/db/models/products";
+import { ProductCategory } from "@/db/models/productCategory";
 import { IUserDocument, User } from "@/db/models/user";
 import { PERMISSIONS, STATUS, USER_TYPE } from "@/enums";
 import { jwtHelper } from "@/helpers/jwt";
@@ -84,6 +85,17 @@ export const createSuperAdminSession = () =>
   createTestSession(USER_TYPE.SUPER_ADMIN);
 
 export const createUserSession = () => createTestSession(USER_TYPE.USER);
+
+export async function seedProductCategory(
+  companyId: mongoose.Types.ObjectId,
+  overrides: Record<string, unknown> = {},
+) {
+  return ProductCategory.create({
+    name: `${faker.commerce.department()} ${faker.string.alphanumeric(8)}`,
+    companyRef: companyId,
+    ...overrides,
+  });
+}
 
 export async function seedProduct(
   companyId: mongoose.Types.ObjectId,
