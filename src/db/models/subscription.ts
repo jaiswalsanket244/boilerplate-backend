@@ -15,6 +15,7 @@ export interface ISubscription {
   period?: string;
   stripeSubscriptionId?: string;
   subscriptionCancellationRequested?: boolean;
+  cancelledByCompanyDeactivation?: boolean;
   stripeCustomerId?: string;
   productId?: string;
   status: STATUS;
@@ -65,6 +66,12 @@ const SubscriptionSchema = new mongoose.Schema<ISubscriptionDocument>(
       required: false,
     },
     subscriptionCancellationRequested: {
+      type: Boolean,
+      default: false,
+    },
+    // Set when the cancellation came from a super-admin deactivating the
+    // company, so reactivation never undoes a cancellation the customer made.
+    cancelledByCompanyDeactivation: {
       type: Boolean,
       default: false,
     },

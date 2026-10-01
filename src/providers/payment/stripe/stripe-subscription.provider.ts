@@ -14,6 +14,12 @@ export class StripeSubscriptionProvider {
     });
   };
 
+  public undoCancelSubscription = async (subscriptionId: string) => {
+    return this.stripe.subscriptions.update(subscriptionId, {
+      cancel_at_period_end: false,
+    });
+  };
+
   public createNewSubscription = async (
     customerId: string,
     priceId: string,

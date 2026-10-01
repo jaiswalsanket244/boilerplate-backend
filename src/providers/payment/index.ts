@@ -164,6 +164,13 @@ export class PaymentGatewayService {
   };
 
   /**
+   * Withdraws a pending end-of-period cancellation.
+   */
+  public undoCancelSubscription = async (subscriptionId: string) => {
+    return this.stripeSubscription.undoCancelSubscription(subscriptionId);
+  };
+
+  /**
    * Fetches and deletes incomplete subscriptions for a customer.
    */
   public cleanupIncompleteSubscriptions = async (customerId: string) => {
