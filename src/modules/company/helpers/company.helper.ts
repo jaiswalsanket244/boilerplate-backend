@@ -5,6 +5,8 @@ import { User } from "@/db/models/user";
 import { Company, ICompany } from "@/db/models/company";
 import { PAGINATION } from "@/constants/pagination";
 import { extractLimitAndOffset } from "@/helpers/pagination";
+import { STATUS } from "@/enums";
+import { COMPANY_STATUS_TRANSITION } from "@/modules/company/utils/company.enum";
 
 class CompanyHelper {
   /**
@@ -63,6 +65,38 @@ class CompanyHelper {
     return Company.findByIdAndUpdate(companyRef, updatedData, {
       new: true,
     });
+  };
+
+  /**
+   * Update a company and return both its pre-update and post-update state
+   */
+  updateWithPrevious = async (
+    companyRef: string,
+    updatedData: Partial<ICompany>,
+  ) => {
+    // The pre-image comes from the same atomic write, so when two requests
+    // deactivate the company concurrently only one of them sees ACTIVE -> INACTIVE.
+    const previous = await Company.findByIdAndUpdate(companyRef, updatedData, {
+      new: false,
+    });
+    const updated = previous ? await Company.findById(companyRef) : null;
+    return { previous, updated };
+  };
+
+  /**
+   * Classify a companyStatus change; null when the status did not change
+   */
+  getStatusTransition = (
+    previousStatus?: STATUS,
+    nextStatus?: STATUS,
+  ): COMPANY_STATUS_TRANSITION | null => {
+    if (previousStatus === STATUS.ACTIVE && nextStatus === STATUS.INACTIVE) {
+      return COMPANY_STATUS_TRANSITION.DEACTIVATED;
+    }
+    if (previousStatus === STATUS.INACTIVE && nextStatus === STATUS.ACTIVE) {
+      return COMPANY_STATUS_TRANSITION.REACTIVATED;
+    }
+    return null;
   };
 
   /**

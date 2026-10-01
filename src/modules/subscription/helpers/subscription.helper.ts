@@ -11,6 +11,7 @@ import {
   IUserPlanResponse,
 } from "@/modules/subscription/utils/subscription.types";
 import { TObjectId } from "@/types";
+import { STRIPE_SUBSCRIPTION_STATUS } from "@/modules/subscription/utils/subscription.enum";
 
 class SubscriptionHelper {
   private stripe: Stripe;
@@ -64,6 +65,24 @@ class SubscriptionHelper {
       stripeSubscriptionId: subscription?.stripeSubscriptionId,
       billingCycle: subscription?.currentPeriodEnds,
     };
+  };
+
+  /**
+   * Find a company's subscriptions that Stripe can still bill
+   */
+  findBillableCompanySubscriptions = async (companyRef: TObjectId) => {
+    // The webhook creates one row per Stripe subscription with the buyer's
+    // companyRef, so a company can hold several; callers must act on all.
+    return Subscription.find({
+      companyRef,
+      status: {
+        $in: [
+          STRIPE_SUBSCRIPTION_STATUS.ACTIVE,
+          STRIPE_SUBSCRIPTION_STATUS.PAST_DUE,
+        ],
+      },
+      stripeSubscriptionId: { $exists: true, $nin: [null, ""] },
+    });
   };
 
   /**
