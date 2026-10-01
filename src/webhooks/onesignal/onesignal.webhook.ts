@@ -15,7 +15,7 @@ export class OnesignalWebhook {
       ) {
         await Notification.updateOne(
           { _id: additionalData.notificationId },
-          { $set: { isOpened: true } },
+          { $set: { isRead: true } },
         );
       }
       socketService.emit("update-notifications-count");
