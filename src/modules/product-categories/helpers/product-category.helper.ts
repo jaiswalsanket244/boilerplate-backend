@@ -3,6 +3,7 @@ import {
   PRODUCT_CATEGORY_NAME_COLLATION,
   ProductCategory,
 } from "@/db/models/productCategory";
+import { Products } from "@/db/models/products";
 import { createFacetPipeline } from "@/helpers/query";
 import { extractLimitAndOffset } from "@/helpers/pagination";
 import {
@@ -57,11 +58,24 @@ class ProductCategoryHelper {
   };
 
   /**
-   * Hard-deletes a category. Products assigned to it are unassigned, never blocked
-   * (CYR-182); clearing their category reference belongs here once products have one.
+   * Hard-deletes a category and unassigns its products; deletion is never blocked (CYR-182).
+   *
+   * The unset runs only after the delete succeeds, so a failed or missed delete never strips
+   * products of a category that still exists. Once the category is gone, new assignments to it
+   * fail validation, so the unset catches every product assigned before the delete. An
+   * assignment validated just before the delete but written after the unset can still leave a
+   * reference to the deleted id; that product simply matches no existing category.
+   * Scoping by companyRef keeps the unset inside the category's company.
    */
   delete = async (condition: FilterQuery<IProductCategoryDocument>) => {
-    return ProductCategory.findOneAndDelete(condition);
+    const category = await ProductCategory.findOneAndDelete(condition);
+    if (category) {
+      await Products.updateMany(
+        { categoryRef: category._id, companyRef: category.companyRef },
+        { $unset: { categoryRef: 1 } },
+      );
+    }
+    return category;
   };
 }
 

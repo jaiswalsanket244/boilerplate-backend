@@ -1,11 +1,13 @@
 import { createApp } from "@/app";
 import { AuditLogModel } from "@/db/models/audit-logs/audit-log";
 import { ProductCategory } from "@/db/models/productCategory";
+import { Products } from "@/db/models/products";
 import { PERMISSIONS, USER_TYPE } from "@/enums";
 import {
   createAdminSession,
   createTestSession,
   createUserSession,
+  seedProduct,
   seedProductCategory,
 } from "@/tests/utils/auth";
 import mongoose from "mongoose";
@@ -48,6 +50,28 @@ describe("DELETE /api/admin/product-categories/:id", () => {
         }).lean(),
       );
       expect(row?.target?.label).toBe("Shoes");
+    });
+
+    it("unassigns its products and leaves other categories' products untouched", async () => {
+      const session = await createAdminSession();
+      const shoes = await seedProductCategory(session.company._id);
+      const hats = await seedProductCategory(session.company._id);
+      const shoe = await seedProduct(session.company._id, {
+        categoryRef: shoes._id,
+      });
+      const hat = await seedProduct(session.company._id, {
+        categoryRef: hats._id,
+      });
+
+      const res = await request(app)
+        .delete(url(shoes._id))
+        .set("Cookie", session.cookie);
+
+      expect(res.status).toBe(200);
+      const dbShoe = await Products.findById(shoe._id).lean();
+      expect(dbShoe).not.toHaveProperty("categoryRef");
+      const dbHat = await Products.findById(hat._id);
+      expect(dbHat?.categoryRef?.toString()).toBe(hats._id.toString());
     });
 
     it("lets the same name be created again after deletion", async () => {
@@ -96,6 +120,23 @@ describe("DELETE /api/admin/product-categories/:id", () => {
       expect(await ProductCategory.findById(categoryB._id)).not.toBeNull();
     });
 
+    it("leaves products assigned when another company's delete is refused", async () => {
+      const sessionA = await createAdminSession();
+      const sessionB = await createAdminSession();
+      const categoryB = await seedProductCategory(sessionB.company._id);
+      const productB = await seedProduct(sessionB.company._id, {
+        categoryRef: categoryB._id,
+      });
+
+      await request(app)
+        .delete(url(categoryB._id))
+        .set("Cookie", sessionA.cookie)
+        .expect(404);
+
+      const dbProduct = await Products.findById(productB._id);
+      expect(dbProduct?.categoryRef?.toString()).toBe(categoryB._id.toString());
+    });
+
     it("returns 404 for an unknown id", async () => {
       const session = await createAdminSession();
 
@@ -109,9 +150,7 @@ describe("DELETE /api/admin/product-categories/:id", () => {
 
   describe("auth errors", () => {
     it("returns 401 when unauthenticated", async () => {
-      const res = await request(app).delete(
-        url(new mongoose.Types.ObjectId()),
-      );
+      const res = await request(app).delete(url(new mongoose.Types.ObjectId()));
 
       expect(res.status).toBe(401);
     });
