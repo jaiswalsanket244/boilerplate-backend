@@ -184,7 +184,7 @@ export class NotificationsController {
 
       const data = await notificationsHelper.markAllAsRead({
         userRef,
-        isOpened: false,
+        isRead: false,
       });
       return SuccessResponse(res, httpStatus.OK, {
         message: NOTIFICATION_MESSAGES.NOTIFICATION_MARKED_READ,
@@ -204,7 +204,7 @@ export class NotificationsController {
 
       const data = await notificationsHelper.findAndUpdate({
         id,
-        update: { isOpened: true },
+        update: { isRead: true },
       });
       return SuccessResponse(res, httpStatus.OK, {
         message: NOTIFICATION_MESSAGES.NOTIFICATION_MARKED_READ,

@@ -6,7 +6,7 @@ export interface INotifications {
   userRef: mongoose.Types.ObjectId;
   message: string;
   title: string;
-  isOpened: boolean;
+  isRead: boolean;
   companyRef?: mongoose.Types.ObjectId;
   redirectUrl?: string;
 }
@@ -28,7 +28,7 @@ const NotificationSchema = new mongoose.Schema<INotificationsDocument>(
       type: String,
       required: true,
     },
-    isOpened: {
+    isRead: {
       type: Boolean,
       default: false,
       required: true,

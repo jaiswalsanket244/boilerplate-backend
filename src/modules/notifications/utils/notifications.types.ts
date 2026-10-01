@@ -5,7 +5,7 @@ import { TObjectId } from "@/types";
 export type TNotification = {
   userId?: TObjectId;
   message?: string;
-  isOpened?: boolean;
+  isRead?: boolean;
   companyRef?: TObjectId;
 };
 

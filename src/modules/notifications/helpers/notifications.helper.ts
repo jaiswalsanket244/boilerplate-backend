@@ -36,7 +36,7 @@ class NotificationsHelper {
   }
 
   async create(
-    data: Omit<INotifications, "_id" | "isOpened">,
+    data: Omit<INotifications, "_id" | "isRead">,
     options: ICreateNotificationOptions = { createNotificationInDb: true },
   ) {
     const userId = data.userRef.toString();
@@ -77,11 +77,11 @@ class NotificationsHelper {
   }
 
   async getUnreadCount(userRef: TObjectId) {
-    return Notification.countDocuments({ userRef, isOpened: false });
+    return Notification.countDocuments({ userRef, isRead: false });
   }
 
   async markAllAsRead(condition: FilterQuery<INotifications>) {
-    return Notification.updateMany(condition, { isOpened: true });
+    return Notification.updateMany(condition, { isRead: true });
   }
 
   async updatePreference(
