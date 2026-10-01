@@ -123,12 +123,18 @@ export class SubscriptionWebhook {
                   },
                 );
 
-                // Send success email
+                // Withdrawing a pending cancellation (e.g. company reactivation)
+                // also arrives here as an active update; it is not a new
+                // subscription, so the welcome email must not be sent again.
+                const isCancellationUndone =
+                  event.data.previous_attributes?.cancel_at_period_end === true;
 
-                await sendNewSubscriptionEmail({
-                  email: user.email,
-                  fullName: user.fullName,
-                });
+                if (!isCancellationUndone) {
+                  await sendNewSubscriptionEmail({
+                    email: user.email,
+                    fullName: user.fullName,
+                  });
+                }
               }
             } catch (error) {
               return ErrorResponse(res, status.BAD_REQUEST, {

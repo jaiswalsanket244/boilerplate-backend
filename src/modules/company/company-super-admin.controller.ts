@@ -1,6 +1,8 @@
 import { SuccessResponse } from "@/helpers/api-response";
 import { companyHelper } from "@/modules/company/helpers/company.helper";
 import { COMPANY_MESSAGES } from "@/modules/company/utils/company.constant";
+import { COMPANY_STATUS_TRANSITION } from "@/modules/company/utils/company.enum";
+import { subscriptionHelper } from "@/modules/subscription/helpers/subscription.helper";
 import { TCompanyController } from "@/modules/company/utils/company.types";
 import { PaginatedSearchQuery } from "@/types/query.types";
 import status from "http-status";
@@ -58,7 +60,22 @@ export class CompanySuperAdminController {
       const id: string = req.params.id;
       const update = req.body;
 
-      const data = await companyHelper.update(id, update);
+      const { previous, updated: data } =
+        await companyHelper.updateWithPrevious(id, update);
+
+      const transition = companyHelper.getStatusTransition(
+        previous?.companyStatus,
+        data?.companyStatus,
+      );
+      if (transition === COMPANY_STATUS_TRANSITION.DEACTIVATED) {
+        await subscriptionHelper.cancelCompanySubscriptionsAtPeriodEnd(
+          data!._id,
+        );
+      } else if (transition === COMPANY_STATUS_TRANSITION.REACTIVATED) {
+        await subscriptionHelper.undoCompanySubscriptionCancellations(
+          data!._id,
+        );
+      }
 
       return SuccessResponse(res, status.OK, {
         message: COMPANY_MESSAGES.COMPANY_UPDATED_SUCCESS,
